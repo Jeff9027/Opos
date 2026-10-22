@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oposicions PRO v30 - JSON & Creació Manual</title>
+    <title>Oposicions PRO v31 - Detector Duplicats i Importador Millorat</title>
     <style>
         :root {
             --bg-color: #f4f6f8;
@@ -112,14 +112,21 @@
         .doubt-btn { color: #aaa; }
         .doubt-btn.active { background: #f1c40f; color: white; border-color: #f1c40f; }
 
-        /* MODAL D'EDICIÓ / CREACIÓ DE PREGUNTA */
+        /* MODALS */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 15px; }
-        .modal-box { background: var(--card-bg); color: var(--text-color); width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
+        .modal-box { background: var(--card-bg); color: var(--text-color); width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
         .modal-row { margin-bottom: 12px; }
         .modal-row label { display: block; font-weight: 600; font-size: 0.9em; margin-bottom: 4px; color: var(--accent-color); }
         .opt-edit-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
         .opt-edit-row input[type="radio"] { transform: scale(1.3); cursor: pointer; }
         .opt-edit-row textarea { height: 52px; flex: 1; font-size: 0.95em; padding: 8px; }
+
+        /* DUPLICATES MANAGER */
+        .dup-pair { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px; background: var(--badge-bg); }
+        .dup-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+        @media (max-width: 650px) { .dup-cols { grid-template-columns: 1fr; } }
+        .dup-item { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; font-size: 0.85em; display: flex; flex-direction: column; justify-content: space-between; }
+        .dup-opts { margin: 8px 0; padding-left: 16px; color: var(--text-color); opacity: 0.9; }
 
         .hide { display: none !important; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -133,7 +140,7 @@
 <body>
 
     <div class="header">
-        <h1>Oposicions PRO v30</h1>
+        <h1>Oposicions PRO v31</h1>
         <div class="header-controls">
             <span id="syncStatus" class="sync-badge" onclick="pullFromCloud(true)" title="Clica per comprovar actualitzacions del núvol">☁️ Local</span>
             <button class="mode-btn" onclick="toggleTheme()">🌗</button>
@@ -153,8 +160,7 @@
         
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
             <h3 style="margin:0;">📊 El teu Progrés per Tema</h3>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="sec-btn" style="background:var(--success-bg); font-weight:bold;" onclick="openNewQuestionModal()">➕ Nova Pregunta</button>
+            <div style="display:flex; gap:8px;">
                 <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(true)">Marcar Tots</button>
                 <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(false)">Desmarcar</button>
             </div>
@@ -176,14 +182,14 @@
 
     <div class="panel" id="toolsPanel">
         <div class="tools-title" onclick="document.getElementById('toolsBody').classList.toggle('show')">
-            🛠️ Eines (Núvol / Importar Text o JSON / Gestió Temes) <span>▼</span>
+            🛠️ Eines (Núvol / Importar / Crear / Duplicats / Temes) <span>▼</span>
         </div>
         <div class="tools-body" id="toolsBody">
             
             <div class="cloud-box">
                 <h4 style="margin:0 0 8px 0;">☁️ Sincronització al Núvol (Supabase)</h4>
                 <div class="cloud-grid">
-                    <input type="text" id="sbUrl" class="input-text" placeholder="Project URL (ex: [https://xyz.supabase.co](https://xyz.supabase.co))">
+                    <input type="text" id="sbUrl" class="input-text" placeholder="Project URL (ex: https://xyz.supabase.co)">
                     <input type="password" id="sbKey" class="input-text" placeholder="API Key (Publishable / anon public)">
                     <input type="text" id="sbSyncId" class="input-text" placeholder="ID Secret de sincronització (ex: opos_a1_secret)">
                 </div>
@@ -195,10 +201,11 @@
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:20px; margin-bottom:8px;">
-                <strong>📥 Importar Preguntes (Text Acadèmia o JSON de Gemini/NotebookLM):</strong>
-                <div style="display:flex; gap:8px;">
-                    <button class="sec-btn" style="background:var(--success-bg);" onclick="openNewQuestionModal()">➕ Crear Manualment</button>
-                    <button class="sec-btn" style="background:#8e44ad;" onclick="copyAIPrompt()" title="Copia les instruccions per demanar preguntes en JSON a Gemini o NotebookLM">📋 Copiar Prompt IA</button>
+                <strong>📥 Importar Preguntes (Text Acadèmia o JSON):</strong>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="sec-btn" style="background:var(--success-bg); font-weight:bold;" onclick="openNewQuestionModal()">➕ Crear Manualment</button>
+                    <button class="sec-btn" style="background:#8e44ad;" onclick="copyAIPrompt()" title="Copia el prompt per generar preguntes en JSON amb Gemini o NotebookLM">📋 Copiar Prompt IA</button>
+                    <button class="sec-btn" style="background:#d35400;" onclick="openDuplicatesModal()" title="Detecta preguntes repetides o molt semblants">🔍 Cercar Duplicats</button>
                 </div>
             </div>
             <textarea id="impText" placeholder="Enganxa aquí el text de l'acadèmia (Pregunta 1...) O el bloc JSON generat amb IA ([ { &quot;pregunta&quot;: ... } ])"></textarea>
@@ -243,7 +250,6 @@
         <button id="finishBtn" class="main-btn hide" style="width:100%; margin-top:20px; background:#27ae60;" onclick="finishSimulacre()">🏁 Corregir i Finalitzar</button>
     </div>
 
-    <!-- DATALIST PER AUTOCOMPLETAR TEMES -->
     <datalist id="existingTopicsList"></datalist>
 
     <!-- MODAL D'EDICIÓ / CREACIÓ DE PREGUNTA -->
@@ -300,6 +306,18 @@
         </div>
     </div>
 
+    <!-- MODAL DE DETECCIÓ DE DUPLICATS -->
+    <div id="dupModal" class="modal-overlay hide" onclick="if(event.target===this) closeDuplicatesModal()">
+        <div class="modal-box" style="max-width:850px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="margin:0; color:var(--accent-color);">🔍 Detector de Preguntes Duplicades</h3>
+                <button class="sec-btn" onclick="closeDuplicatesModal()">Tancar ✖</button>
+            </div>
+            <div id="dupSummary" style="margin-bottom:15px;"></div>
+            <div id="dupListContainer"></div>
+        </div>
+    </div>
+
 <script>
     let db = [];
     let currentSession = [];
@@ -309,6 +327,7 @@
     let editingSessionIdx = null;
     let isCreatingNew = false;
     let currentFilter = 'all';
+    let ignoredDupPairs = new Set();
 
     window.onload = async () => {
         const saved = localStorage.getItem('opos_v26_db') || localStorage.getItem('opos_v25_db') || localStorage.getItem('opos_v24_db');
@@ -318,6 +337,11 @@
                 normalizeDB();
                 localStorage.setItem('opos_v26_db', JSON.stringify(db));
             } catch (e) { console.error("Error carregant dades locals:", e); }
+        }
+
+        const savedIgnored = localStorage.getItem('opos_ignored_dups');
+        if (savedIgnored) {
+            try { ignoredDupPairs = new Set(JSON.parse(savedIgnored)); } catch(e) {}
         }
 
         if (localStorage.getItem('opos_dark') === '1') document.body.classList.add('dark-mode');
@@ -487,7 +511,6 @@
         db.forEach(q => {
             if (!q.id) q.id = Date.now() + Math.random();
             
-            // Neteja automàtica de residus de capçaleres d'acadèmia en preguntes antigues
             if (q.pregunta) {
                 q.pregunta = cleanHeader(q.pregunta);
             }
@@ -542,14 +565,13 @@
             a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
         );
 
-        // Actualitzem el datalist per autocompletar temes
         const dataList = document.getElementById('existingTopicsList');
         if (dataList) {
             dataList.innerHTML = currentTopicsList.map(t => `<option value="${escapeHTML(t)}">`).join('');
         }
 
         const grid = document.getElementById('topicGrid');
-        grid.innerHTML = currentTopicsList.length ? '' : '<div style="padding:10px; color:#777;">No hi ha preguntes. Puja una còpia JSON, crea\'n una o sincronitza amb el núvol.</div>';
+        grid.innerHTML = currentTopicsList.length ? '' : '<div style="padding:10px; color:#777;">No hi ha preguntes. Puja una còpia JSON, importa text o sincronitza amb el núvol.</div>';
         
         currentTopicsList.forEach((t, index) => {
             const qs = db.filter(q => q.tema === t);
@@ -645,7 +667,7 @@
         return scored.slice(0, limit).map(item => item.q);
     }
 
-    // --- FUNCIONALITATS I DOBLE SISTEMA D'IMPORTACIÓ ---
+    // --- FUNCIONALITATS D'IMPORTACIÓ (JSON + ACADÈMIA) ---
     function copyAIPrompt() {
         const promptText = `Genera 10 preguntes tipus test d'oposicions basades en aquesta informació.
 Respon ÚNICAMENT amb un bloc de codi JSON vàlid amb aquesta estructura exacta, sense text addicional:
@@ -674,6 +696,403 @@ Nota: El camp "correcta" ha de ser un número enter del 0 al 3 (0=A, 1=B, 2=C, 3
         });
     }
 
+    function cleanHeader(text) { 
+        if (!text) return "";
+        let clean = String(text).replace(/\u00A0/g, " ");
+        const patterns = [
+            /^Text de la pregunta/i, /^Marca la pregunta/i, /^Desmarca la pregunta/i, /^Desmarcada/i, /^Descartada/i,
+            /^Incorrecte/i, /^Correcte/i, /^Puntuació.*/i, /^Retroacció.*/i, /^Enunciat de la pregunta/i, /^Pregunta\s+\d+/i
+        ];
+        let changed = true;
+        while (changed) {
+            changed = false;
+            let initial = clean.replace(/^[\s\-–—:._]+/, '').trim();
+            clean = initial;
+            for (let p of patterns) {
+                let match = initial.match(p);
+                if (match && match.index === 0) {
+                    clean = initial.substring(match[0].length);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        return clean.replace(/^[\s\-–—:._]+/, '').replace(/\s+/g, ' ').trim(); 
+    }
+
+    function cleanOption(text) {
+        return text ? String(text).replace(/\u00A0/g, " ").replace(/\s+/g, ' ').trim() : "";
+    }
+
+    function splitByOptionLetter(text, letter) {
+        // Prioritza l'opció a l'inici de línia per no tallar frases internes (ex: "art. 12.a. de la llei")
+        const lineRegex = new RegExp(`(?:^|\\n)\\s*${letter}[.)]\\s+`, 'i');
+        if (lineRegex.test(text)) {
+            const idx = text.search(lineRegex);
+            const matchLen = text.match(lineRegex)[0].length;
+            return [text.substring(0, idx), text.substring(idx + matchLen)];
+        }
+        const inlineRegex = new RegExp(`\\b${letter}[.)]\\s+`, 'i');
+        if (inlineRegex.test(text)) {
+            const idx = text.search(inlineRegex);
+            const matchLen = text.match(inlineRegex)[0].length;
+            return [text.substring(0, idx), text.substring(idx + matchLen)];
+        }
+        return null;
+    }
+
+    function importData() {
+        const rawBox = document.getElementById('impText');
+        let raw = rawBox.value.replace(/\u00A0/g, " ").trim(); 
+        const manualTopic = document.getElementById('impTopic').value.trim();
+        const log = document.getElementById('impLog');
+        log.style.display = 'block'; 
+        log.innerHTML = '';
+
+        if (!raw) return alert("No hi ha text per processar.");
+
+        // Netegem possibles etiquetes markdown sense usar accents oberts literals
+        const fenceStart = new RegExp('^\\x60{3}(?:json)?\\s*', 'i');
+        const fenceEnd = new RegExp('\\s*\\x60{3}$', 'i');
+        let cleanJsonCandidate = raw.replace(fenceStart, '').replace(fenceEnd, '').trim();
+
+        // 1. AUTO-DETECCIÓ DE FORMAT JSON
+        if (cleanJsonCandidate.startsWith('[') || cleanJsonCandidate.startsWith('{')) {
+            try {
+                let parsed = JSON.parse(cleanJsonCandidate);
+                if (!Array.isArray(parsed)) parsed = [parsed];
+                let added = 0;
+                let skipped = 0;
+
+                parsed.forEach((item, idx) => {
+                    if (!item || !item.pregunta || !Array.isArray(item.opcions) || item.opcions.length < 2) {
+                        log.innerHTML += `<div style="color:#e67e22">⚠️ Element ${idx + 1} ignorat: format incomplet.</div>`;
+                        return;
+                    }
+
+                    const qText = cleanHeader(String(item.pregunta));
+                    const opts = [
+                        cleanOption(item.opcions[0] || ""),
+                        cleanOption(item.opcions[1] || ""),
+                        cleanOption(item.opcions[2] || ""),
+                        cleanOption(item.opcions[3] || "")
+                    ];
+
+                    let corrIdx = 0;
+                    if (typeof item.correcta === 'number') {
+                        corrIdx = item.correcta;
+                    } else if (typeof item.correcta === 'string') {
+                        const mapLet = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '0': 0, '1': 1, '2': 2, '3': 3 };
+                        const key = item.correcta.trim().toLowerCase();
+                        if (mapLet[key] !== undefined) corrIdx = mapLet[key];
+                    }
+                    if (corrIdx < 0 || corrIdx > 3) corrIdx = 0;
+
+                    const finalTopic = manualTopic || (item.tema ? String(item.tema).trim() : "General");
+                    const just = cleanOption(item.justificacio || item.info || "");
+
+                    const exists = db.some(x => normForDup(x.pregunta) === normForDup(qText) && normForDup(x.opcions[0]) === normForDup(opts[0]));
+                    if (!exists) {
+                        db.push({
+                            id: Date.now() + Math.random(),
+                            tema: finalTopic,
+                            pregunta: qText,
+                            opcions: opts,
+                            correcta: corrIdx,
+                            justificacio: just,
+                            stat: 'new',
+                            status: 'new',
+                            doubt: false,
+                            attempts: 0,
+                            hits: 0,
+                            misses: 0,
+                            lastSeen: 0
+                        });
+                        added++;
+                        log.innerHTML += `<div style="color:green">✅ [JSON] ${escapeHTML(qText.substring(0, 45))}...</div>`;
+                    } else {
+                        skipped++;
+                        log.innerHTML += `<div style="color:#7f8c8d">⏭️ Duplicada: ${escapeHTML(qText.substring(0, 40))}...</div>`;
+                    }
+                });
+
+                rawBox.value = "";
+                saveData();
+                refreshUI();
+                alert(`Importació JSON completada!\n\n✅ Afegides: ${added}\n⏭️ Duplicades omeses: ${skipped}`);
+                return;
+            } catch (err) {
+                return alert("S'ha detectat un intent d'importació JSON però hi ha un error de sintaxi:\n\n" + err.message);
+            }
+        }
+
+        // 2. SISTEMA CLÀSSIC (COPIAR I ENGANXAR TESTS D'ACADÈMIA)
+        const topic = manualTopic || "General";
+        const blocks = raw.split(/(?:^|\n)\s*Pregunta\s+\d+\s*(?:[-–—:.])?\s*/i);
+        let added = 0;
+        let skipped = 0;
+
+        blocks.forEach((block) => {
+            if (!block || block.trim().length < 10) return;
+            try {
+                const splitA = splitByOptionLetter(block, 'a');
+                if (!splitA) return;
+                const qText = cleanHeader(splitA[0]);
+                if (qText.length < 3) return;
+
+                const splitB = splitByOptionLetter(splitA[1], 'b');
+                if (!splitB) return;
+                const optA = cleanOption(splitB[0]);
+
+                const splitC = splitByOptionLetter(splitB[1], 'c');
+                if (!splitC) return;
+                const optB = cleanOption(splitC[0]);
+
+                const splitD = splitByOptionLetter(splitC[1], 'd');
+                if (!splitD) return;
+                const optC = cleanOption(splitD[0]);
+                const rest4 = splitD[1];
+                
+                let optD = "";
+                let just = "";
+
+                // Busquem on acaba l'opció D i comença la justificació o resposta
+                let cutMatch = rest4.match(/(\[Mostrar Justificació\]|Justificació:|Retroacció|\[Mostrar Resposta\]|La resposta correcta és|\n\s*Art\.)/i);
+
+                if (cutMatch) {
+                    optD = cleanOption(rest4.substring(0, cutMatch.index));
+                    let retroText = rest4.substring(cutMatch.index);
+
+                    let justSplit = retroText.split(/\[Mostrar Resposta\]|La resposta correcta és/i);
+                    if (justSplit.length > 0) {
+                        just = cleanOption(justSplit[0]
+                            .replace(/\[Mostrar Justificació\]/ig, "")
+                            .replace(/Justificació:/ig, "")
+                            .replace(/Retroacció/ig, "")).trim();
+                    }
+                } else {
+                    optD = cleanOption(rest4);
+                }
+
+                // Capturem la resposta correcta encara que ocupi més d'una línia
+                let solMatch = block.match(/La resposta correcta és:?([\s\S]*)/i);
+                let corrIdx = -1;
+                if (solMatch) {
+                    let solTxt = cleanOption(solMatch[1]).toLowerCase().replace(/[.,;:]/g, '');
+                    if (solTxt.length > 0) {
+                        let opts = [optA, optB, optC, optD];
+                        let maxScore = 0;
+                        opts.forEach((o, i) => {
+                            let normOpt = cleanOption(o).toLowerCase().replace(/[.,;:]/g, '');
+                            if (!normOpt) return;
+                            let score = 0;
+                            if (normOpt === solTxt) score = 100;
+                            else if (normOpt.includes(solTxt) || solTxt.includes(normOpt)) score = 50;
+                            if (score > maxScore) { maxScore = score; corrIdx = i; }
+                        });
+                    }
+                }
+
+                if (corrIdx !== -1) {
+                    const exists = db.some(x => normForDup(x.pregunta) === normForDup(qText) && normForDup(x.opcions[0]) === normForDup(optA));
+                    if (!exists) {
+                        db.push({
+                            id: Date.now() + Math.random(),
+                            tema: topic,
+                            pregunta: qText,
+                            opcions: [optA, optB, optC, optD],
+                            correcta: corrIdx,
+                            justificacio: just,
+                            stat: 'new',
+                            status: 'new',
+                            doubt: false,
+                            attempts: 0,
+                            hits: 0,
+                            misses: 0,
+                            lastSeen: 0
+                        });
+                        added++;
+                        log.innerHTML += `<div style="color:green">✅ ${escapeHTML(qText.substring(0, 45))}...</div>`;
+                    } else {
+                        skipped++;
+                        log.innerHTML += `<div style="color:#7f8c8d">⏭️ Duplicada: ${escapeHTML(qText.substring(0, 40))}...</div>`;
+                    }
+                } else {
+                    log.innerHTML += `<div style="color:#e74c3c">❌ No s'ha pogut detectar la resposta correcta a: ${escapeHTML(qText.substring(0, 35))}...</div>`;
+                }
+            } catch (e) {}
+        });
+        rawBox.value = ""; 
+        saveData();
+        refreshUI();
+        alert(`Processament finalitzat!\n\n✅ Preguntes noves afegides: ${added}\n⏭️ Duplicades omeses: ${skipped}`);
+    }
+
+    // --- DETECTOR I GESTOR DE PREGUNTES DUPLICADES ---
+    function normForDup(str) {
+        return cleanHeader(String(str || ''))
+            .toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, "");
+    }
+
+    function findDuplicatePairs() {
+        const pairs = [];
+        for (let i = 0; i < db.length; i++) {
+            const q1 = db[i];
+            const nQ1 = normForDup(q1.pregunta);
+            const nOpts1 = (q1.opcions || []).map(normForDup).join('|');
+
+            for (let j = i + 1; j < db.length; j++) {
+                const q2 = db[j];
+                const pairKey = [q1.id, q2.id].sort().join('_');
+                if (ignoredDupPairs.has(pairKey)) continue;
+
+                const nQ2 = normForDup(q2.pregunta);
+                const nOpts2 = (q2.opcions || []).map(normForDup).join('|');
+
+                // 1. Duplicat Exacte (mateixa pregunta i mateixes opcions)
+                if (nQ1 === nQ2 && nOpts1 === nOpts2) {
+                    pairs.push({ q1, q2, type: 'exact', reason: '100% Idèntica (Enunciat i Opcions)' });
+                    continue;
+                }
+
+                // 2. Mateixes 4 opcions exactes (encara que l'enunciat tingui variacions)
+                if (nOpts1.length > 20 && nOpts1 === nOpts2) {
+                    pairs.push({ q1, q2, type: 'potential', reason: 'Les 4 opcions de resposta són idèntiques' });
+                    continue;
+                }
+
+                // 3. Mateix enunciat i almenys 1 opció coincident (evita falsos positius d'enunciats genèrics curts amb opcions diferents)
+                if (nQ1 === nQ2) {
+                    const opts1Set = new Set((q1.opcions || []).map(normForDup).filter(Boolean));
+                    const commonOpts = (q2.opcions || []).map(normForDup).filter(o => opts1Set.has(o)).length;
+                    if (commonOpts >= 1 || nQ1.length > 65) {
+                        pairs.push({ q1, q2, type: 'potential', reason: commonOpts >= 1 ? 'Mateix enunciat i opcions coincidents' : 'Enunciat llarg idèntic' });
+                    }
+                }
+            }
+        }
+        return pairs;
+    }
+
+    function openDuplicatesModal() {
+        renderDuplicatesModal();
+        document.getElementById('dupModal').classList.remove('hide');
+    }
+
+    function closeDuplicatesModal() {
+        document.getElementById('dupModal').classList.add('hide');
+    }
+
+    function renderDuplicatesModal() {
+        const pairs = findDuplicatePairs();
+        const summary = document.getElementById('dupSummary');
+        const list = document.getElementById('dupListContainer');
+        list.innerHTML = '';
+
+        const exactPairs = pairs.filter(p => p.type === 'exact');
+
+        if (pairs.length === 0) {
+            summary.innerHTML = `<div style="padding:15px; background:#d5f5e3; color:#196f3d; border-radius:8px; font-weight:bold;">✅ No s'ha detectat cap pregunta duplicada a la base de dades!</div>`;
+            return;
+        }
+
+        let sumHtml = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:10px; background:var(--badge-bg); border-radius:8px;">
+            <span>S'han detectat <strong>${pairs.length}</strong> parelles de possibles duplicats (${exactPairs.length} exactes).</span>`;
+        if (exactPairs.length > 0) {
+            sumHtml += `<button class="sec-btn" style="background:var(--success-bg); font-weight:bold;" onclick="autoCleanExactDuplicates()">🧹 Fusionar i eliminar ${exactPairs.length} duplicats exactes</button>`;
+        }
+        sumHtml += `</div>`;
+        summary.innerHTML = sumHtml;
+
+        pairs.forEach((p) => {
+            const box = document.createElement('div');
+            box.className = 'dup-pair';
+            const badgeColor = p.type === 'exact' ? '#c0392b' : '#d35400';
+
+            const renderQ = (q, keepId, dropId) => `
+                <div class="dup-item">
+                    <div>
+                        <div style="font-weight:bold; color:var(--accent-color); margin-bottom:4px;">${escapeHTML(q.tema)}</div>
+                        <div style="font-weight:600; margin-bottom:6px;">${escapeHTML(q.pregunta)}</div>
+                        <ol type="a" class="dup-opts">
+                            ${(q.opcions || []).map((o, i) => `<li style="${i === q.correcta ? 'font-weight:bold; color:var(--success-bg);' : ''}">${escapeHTML(o)}</li>`).join('')}
+                        </ol>
+                    </div>
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <span>${formatQuestionStats(q)}</span>
+                        <button class="sec-btn" style="background:var(--accent-color); font-size:0.85em;" onclick="resolveDuplicate('${keepId}', '${dropId}')">Conservar aquesta</button>
+                    </div>
+                </div>
+            `;
+
+            box.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <span style="background:${badgeColor}; color:white; padding:3px 10px; border-radius:12px; font-size:0.8em; font-weight:bold;">${escapeHTML(p.reason)}</span>
+                    <button class="sec-btn" style="font-size:0.8em;" onclick="ignoreDuplicatePair('${p.q1.id}', '${p.q2.id}')">👀 Són preguntes diferents (Conservar totes dues)</button>
+                </div>
+                <div class="dup-cols">
+                    ${renderQ(p.q1, p.q1.id, p.q2.id)}
+                    ${renderQ(p.q2, p.q2.id, p.q1.id)}
+                </div>
+            `;
+            list.appendChild(box);
+        });
+    }
+
+    function mergeAndRemoveQuestion(keepId, dropId) {
+        const keepQ = db.find(x => String(x.id) === String(keepId));
+        const dropQ = db.find(x => String(x.id) === String(dropId));
+        if (!keepQ || !dropQ) return;
+
+        // Sumem historial perquè no es perdi cap estadística
+        keepQ.attempts = (keepQ.attempts || 0) + (dropQ.attempts || 0);
+        keepQ.hits = (keepQ.hits || 0) + (dropQ.hits || 0);
+        keepQ.misses = (keepQ.misses || 0) + (dropQ.misses || 0);
+        keepQ.doubt = Boolean(keepQ.doubt || dropQ.doubt);
+        keepQ.lastSeen = Math.max(keepQ.lastSeen || 0, dropQ.lastSeen || 0);
+        if (!keepQ.justificacio && dropQ.justificacio) keepQ.justificacio = dropQ.justificacio;
+        if (keepQ.stat === 'new' && dropQ.stat !== 'new') {
+            keepQ.stat = dropQ.stat;
+            keepQ.status = dropQ.status;
+        }
+
+        db = db.filter(x => String(x.id) !== String(dropId));
+    }
+
+    function resolveDuplicate(keepId, dropId) {
+        mergeAndRemoveQuestion(keepId, dropId);
+        saveData();
+        refreshUI();
+        renderDuplicatesModal();
+    }
+
+    function autoCleanExactDuplicates() {
+        const exactPairs = findDuplicatePairs().filter(p => p.type === 'exact');
+        let removed = 0;
+        exactPairs.forEach(p => {
+            const stillExists1 = db.some(x => String(x.id) === String(p.q1.id));
+            const stillExists2 = db.some(x => String(x.id) === String(p.q2.id));
+            if (stillExists1 && stillExists2) {
+                mergeAndRemoveQuestion(p.q1.id, p.q2.id);
+                removed++;
+            }
+        });
+        saveData();
+        refreshUI();
+        renderDuplicatesModal();
+        alert(`S'han fusionat i eliminat ${removed} preguntes duplicades exactes!`);
+    }
+
+    function ignoreDuplicatePair(id1, id2) {
+        const pairKey = [id1, id2].sort().join('_');
+        ignoredDupPairs.add(pairKey);
+        localStorage.setItem('opos_ignored_dups', JSON.stringify([...ignoredDupPairs]));
+        renderDuplicatesModal();
+    }
+
+    // --- CERCA I GESTIÓ DE TEMES ---
     function runSearch() {
         const val = document.getElementById('globalSearch').value.toLowerCase().trim();
         if (val.length < 3) return alert("Escriu almenys 3 lletres.");
@@ -728,202 +1147,6 @@ Nota: El camp "correcta" ha de ser un número enter del 0 al 3 (0=A, 1=B, 2=C, 3
             saveData();
             refreshUI();
         }
-    }
-
-    function cleanHeader(text) { 
-        if (!text) return "";
-        let clean = text;
-        const patterns = [
-            /^Text de la pregunta/i, /^Marca la pregunta/i, /^Desmarca la pregunta/i, /^Desmarcada/i, /^Descartada/i,
-            /^Incorrecte/i, /^Correcte/i, /^Puntuació.*/i, /^Retroacció.*/i, /^Enunciat de la pregunta/i, /^Pregunta\s+\d+/i
-        ];
-        let changed = true;
-        while(changed) {
-            changed = false;
-            let initial = clean.trim();
-            for (let p of patterns) {
-                let match = initial.match(p);
-                if (match && match.index === 0) {
-                    clean = initial.substring(match[0].length);
-                    changed = true;
-                    break;
-                }
-            }
-        }
-        return clean.replace(/\s+/g, ' ').trim(); 
-    }
-
-    function cleanOption(text) { return text ? String(text).replace(/\s+/g, ' ').trim() : ""; }
-    
-    function importData() {
-        const rawBox = document.getElementById('impText');
-        let raw = rawBox.value.replace(/\u00A0/g, " ").trim(); 
-        const manualTopic = document.getElementById('impTopic').value.trim();
-        const log = document.getElementById('impLog');
-        log.style.display = 'block'; 
-        log.innerHTML = '';
-
-        if (!raw) return alert("No hi ha text per processar.");
-
-        // Netegem possibles blocs markdown ```json ... ``` copiats de Gemini
-        let cleanJsonCandidate = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-
-        // 1. AUTO-DETECCIÓ DE FORMAT JSON
-        if (cleanJsonCandidate.startsWith('[') || cleanJsonCandidate.startsWith('{')) {
-            try {
-                let parsed = JSON.parse(cleanJsonCandidate);
-                if (!Array.isArray(parsed)) parsed = [parsed];
-                let added = 0;
-                let skipped = 0;
-
-                parsed.forEach((item, idx) => {
-                    if (!item || !item.pregunta || !Array.isArray(item.opcions) || item.opcions.length < 2) {
-                        log.innerHTML += `<div style="color:#e67e22">⚠️ Element ${idx + 1} ignorat: format incomplet.</div>`;
-                        return;
-                    }
-
-                    const qText = cleanHeader(String(item.pregunta));
-                    const opts = [
-                        cleanOption(item.opcions[0] || ""),
-                        cleanOption(item.opcions[1] || ""),
-                        cleanOption(item.opcions[2] || ""),
-                        cleanOption(item.opcions[3] || "")
-                    ];
-
-                    // Suport per a 'correcta' numèrica (0-3) o lletra ("A"-"D")
-                    let corrIdx = 0;
-                    if (typeof item.correcta === 'number') {
-                        corrIdx = item.correcta;
-                    } else if (typeof item.correcta === 'string') {
-                        const mapLet = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '0': 0, '1': 1, '2': 2, '3': 3 };
-                        const key = item.correcta.trim().toLowerCase();
-                        if (mapLet[key] !== undefined) corrIdx = mapLet[key];
-                    }
-                    if (corrIdx < 0 || corrIdx > 3) corrIdx = 0;
-
-                    const finalTopic = manualTopic || (item.tema ? String(item.tema).trim() : "General");
-                    const just = cleanOption(item.justificacio || item.info || "");
-
-                    const exists = db.some(x => x.pregunta === qText && x.opcions[0] === opts[0]);
-                    if (!exists) {
-                        db.push({
-                            id: Date.now() + Math.random(),
-                            tema: finalTopic,
-                            pregunta: qText,
-                            opcions: opts,
-                            correcta: corrIdx,
-                            justificacio: just,
-                            stat: 'new',
-                            status: 'new',
-                            doubt: false,
-                            attempts: 0,
-                            hits: 0,
-                            misses: 0,
-                            lastSeen: 0
-                        });
-                        added++;
-                        log.innerHTML += `<div style="color:green">✅ [JSON] ${escapeHTML(qText.substring(0, 45))}...</div>`;
-                    } else {
-                        skipped++;
-                        log.innerHTML += `<div style="color:#7f8c8d">⏭️ Duplicada: ${escapeHTML(qText.substring(0, 40))}...</div>`;
-                    }
-                });
-
-                rawBox.value = "";
-                saveData();
-                refreshUI();
-                alert(`Importació JSON completada!\n\n✅ Afegides: ${added}\n⏭️ Duplicades omeses: ${skipped}`);
-                return;
-            } catch (err) {
-                return alert("S'ha detectat un intent d'importació JSON però hi ha un error de sintaxi al text:\n\n" + err.message);
-            }
-        }
-
-        // 2. SISTEMA CLÀSSIC (COPIAR I ENGANXAR TESTS D'ACADÈMIA)
-        const topic = manualTopic || "General";
-        const blocks = raw.split(/(?:^|\n)\s*Pregunta\s+\d+/i);
-        let added = 0;
-
-        blocks.forEach((block) => {
-            if (block.length < 10) return;
-            try {
-                let partsA = block.split(/\ba\.\s+/);
-                if (partsA.length < 2) return;
-                let qText = cleanHeader(partsA[0]);
-                if (qText.length < 3) return;
-
-                let rest = partsA[1];
-                let partsB = rest.split(/\bb\.\s+/); let optA = cleanOption(partsB[0]);
-                let rest2 = partsB[1];
-                let partsC = rest2.split(/\bc\.\s+/); let optB = cleanOption(partsC[0]);
-                let rest3 = partsC[1];
-                let partsD = rest3.split(/\bd\.\s+/); let optC = cleanOption(partsD[0]);
-                let rest4 = partsD[1];
-                
-                let optD = "";
-                let just = "";
-
-                let cutMatch = rest4.match(/(\[Mostrar Justificació\]|Justificació:|Retroacció|Art\.|La resposta correcta és)/i);
-
-                if (cutMatch) {
-                    optD = cleanOption(rest4.substring(0, cutMatch.index));
-                    let retroText = rest4.substring(cutMatch.index);
-
-                    let justSplit = retroText.split(/\[Mostrar Resposta\]|La resposta correcta és/i);
-                    if (justSplit.length > 0) {
-                        just = cleanOption(justSplit[0]
-                            .replace(/\[Mostrar Justificació\]/ig, "")
-                            .replace(/Justificació:/ig, "")
-                            .replace(/Retroacció/ig, "")).trim();
-                    }
-                } else {
-                    optD = cleanOption(rest4);
-                }
-
-                let solMatch = block.match(/La resposta correcta és:?(.*)/i);
-                let corrIdx = -1;
-                if (solMatch) {
-                    let solTxt = cleanOption(solMatch[1]).toLowerCase().replace(/[.,]/g,'');
-                    let opts = [optA, optB, optC, optD];
-                    let maxScore = 0;
-                    opts.forEach((o, i) => {
-                        let normOpt = cleanOption(o).toLowerCase().replace(/[.,]/g,'');
-                        let score = 0;
-                        if (normOpt === solTxt) score = 100;
-                        else if (normOpt.includes(solTxt)) score = 50;
-                        else if (solTxt.includes(normOpt)) score = 50;
-                        if (score > maxScore) { maxScore = score; corrIdx = i; }
-                    });
-                }
-
-                if (corrIdx !== -1) {
-                    const exists = db.some(x => x.pregunta === qText && x.opcions[0] === optA);
-                    if (!exists) {
-                        db.push({
-                            id: Date.now() + Math.random(),
-                            tema: topic,
-                            pregunta: qText,
-                            opcions: [optA, optB, optC, optD],
-                            correcta: corrIdx,
-                            justificacio: just,
-                            stat: 'new',
-                            status: 'new',
-                            doubt: false,
-                            attempts: 0,
-                            hits: 0,
-                            misses: 0,
-                            lastSeen: 0
-                        });
-                        added++;
-                        log.innerHTML += `<div style="color:green">✅ ${escapeHTML(qText.substring(0,40))}...</div>`;
-                    }
-                }
-            } catch (e) {}
-        });
-        rawBox.value = ""; 
-        saveData();
-        refreshUI();
-        alert(`Processament de text finalitzat! S'han afegit ${added} preguntes noves.`);
     }
 
     // --- TESTS I FILTRES DE RESULTATS ---
@@ -1285,7 +1508,6 @@ Nota: El camp "correcta" ha de ser un número enter del 0 al 3 (0=A, 1=B, 2=C, 3
         if (!newPregunta) return alert("L'enunciat de la pregunta no pot estar buit.");
         if (newOpts.some(o => !o)) return alert("Omple el text de totes 4 opcions (A, B, C i D).");
 
-        // CAS 1: CREACIÓ D'UNA NOVA PREGUNTA MANUAL
         if (isCreatingNew) {
             const newQ = {
                 id: Date.now() + Math.random(),
@@ -1310,7 +1532,6 @@ Nota: El camp "correcta" ha de ser un número enter del 0 al 3 (0=A, 1=B, 2=C, 3
             return;
         }
 
-        // CAS 2: EDICIÓ D'UNA PREGUNTA EXISTENT DURANT EL TEST
         if (editingSessionIdx === null) return;
         const idx = editingSessionIdx;
         const q = currentSession[idx];
