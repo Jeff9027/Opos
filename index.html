@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oposicions PRO v29 - Editor i Filtres</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #2980b9;
+            --border-color: #dcdcdc;
+            --success-bg: #2ecc71;
+            --error-bg: #e74c3c;
+            --neutral-bar: #ecf0f1;
+            --doubt-bg: #fcf3cf;
+            --doubt-text: #9a7d0a;
+            --selected-bg: #e2e6ea;
+            --selected-border: #6c757d;
+            --selected-text: #212529;
+            --badge-bg: #eef2f5;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #64b5f6;
+            --border-color: #333;
+            --success-bg: #27ae60;
+            --error-bg: #c0392b;
+            --neutral-bar: #424242;
+            --doubt-bg: #4d4628;
+            --doubt-text: #f9e79f;
+            --selected-bg: #343a40;
+            --selected-border: #adb5bd;
+            --selected-text: #f8f9fa;
+            --badge-bg: #2c2c2c;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-color); color: var(--text-color); max-width: 900px; margin: 0 auto; padding: 20px; transition: 0.3s; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--accent-color); padding-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        h1 { margin: 0; color: var(--accent-color); font-size: 1.6em; }
+        .header-controls { display: flex; align-items: center; gap: 10px; }
+        .sync-badge { font-size: 0.8em; padding: 5px 10px; border-radius: 15px; border: 1px solid var(--border-color); background: var(--card-bg); cursor: pointer; font-weight: 600; }
+        .mode-btn { background: none; border: 1px solid var(--border-color); font-size: 1.2em; padding: 5px 10px; border-radius: 20px; cursor: pointer; color: var(--text-color); }
+
+        .panel { background: var(--card-bg); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border-color); }
+        
+        .status-bar { display: flex; gap: 10px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; background: var(--bg-color); padding-bottom: 10px; }
+        .status-card { flex: 1; min-width: 140px; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; cursor: pointer; transition: 0.2s; border: 1px solid var(--border-color); background: var(--card-bg); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .status-card:hover { transform: translateY(-2px); }
+        .st-error { color: var(--error-bg); border-color: var(--error-bg); }
+        .st-doubt { color: #f1c40f; border-color: #f1c40f; }
+
+        .search-box { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-size: 1em; margin-bottom: 15px; box-sizing: border-box; }
+        .search-box:focus { border-color: var(--accent-color); outline: none; }
+
+        .topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; max-height: 320px; overflow-y: auto; margin: 15px 0; padding: 5px; }
+        .topic-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden; }
+        .topic-card:hover { border-color: var(--accent-color); }
+        
+        .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 0.95em; font-weight: 600; }
+        .progress-track { height: 6px; width: 100%; background: var(--neutral-bar); border-radius: 3px; overflow: hidden; display: flex; margin-top: 8px; }
+        .progress-fill { height: 100%; }
+        .fill-ok { background-color: var(--success-bg); }
+        .fill-err { background-color: var(--error-bg); }
+        .t-stats { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.8em; }
+
+        .action-area { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; }
+        .main-btn { background: var(--accent-color); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; flex-grow: 1; }
+        .num-input { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); width: 70px; text-align: center; background: var(--card-bg); color: var(--text-color); }
+
+        .tools-title { cursor: pointer; font-weight: bold; color: var(--accent-color); display: flex; justify-content: space-between; }
+        .tools-body { display: none; margin-top: 15px; animation: fadeIn 0.3s; }
+        .tools-body.show { display: block; }
+        textarea { width: 100%; height: 110px; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-family: inherit; box-sizing: border-box; }
+        
+        .import-controls { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .sec-btn { background: #7f8c8d; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
+        .input-text { flex: 1; min-width: 180px; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); box-sizing: border-box; }
+
+        .cloud-box { background: var(--badge-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px; }
+        .cloud-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+
+        /* TEST TOP BAR & FILTERS */
+        .test-sticky-bar { position: sticky; top: 0; z-index: 90; background: var(--card-bg); border: 1px solid var(--border-color); border-top: 3px solid var(--accent-color); border-radius: 0 0 10px 10px; padding: 10px 15px; margin-top: -10px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+        .test-bar-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .filter-group { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+        .filter-btn { background: var(--badge-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: 0.2s; }
+        .filter-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+
+        .q-card { background: var(--card-bg); border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 5px solid var(--accent-color); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .q-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; color: var(--accent-color); font-size: 0.85em; font-weight: bold; }
+        .q-meta { display: flex; align-items: center; gap: 8px; }
+        .q-stats-badge { background: var(--badge-bg); color: var(--text-color); padding: 4px 10px; border-radius: 12px; font-size: 0.9em; font-weight: 600; border: 1px solid var(--border-color); }
+        .q-text { font-size: 1.1em; font-weight: 600; margin-bottom: 15px; line-height: 1.5; }
+        
+        .opt { padding: 12px; border: 2px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; position: relative; }
+        .opt:hover { border-color: var(--accent-color); background: rgba(0,0,0,0.02); }
+        
+        .opt.selected { background: var(--selected-bg); border-color: var(--selected-border); color: var(--selected-text); font-weight: 600; }
+        .opt.correct { background: #d5f5e3; border-color: var(--success-bg); color: #196f3d; font-weight: 600; }
+        .opt.incorrect { background: #fadbd8; border-color: var(--error-bg); color: #943126; font-weight: 600; }
+        .opt.disabled { pointer-events: none; opacity: 0.95; }
+
+        .feedback { margin-top: 15px; padding: 15px; background: var(--doubt-bg); color: var(--doubt-text); border-radius: 8px; display: none; font-size: 0.95em; }
+        .icon-btn { background: none; border: 1px solid var(--border-color); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; color: var(--text-color); transition: 0.2s; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { border-color: var(--accent-color); transform: scale(1.05); }
+        .doubt-btn { color: #aaa; }
+        .doubt-btn.active { background: #f1c40f; color: white; border-color: #f1c40f; }
+
+        /* MODAL D'EDICIÓ DE PREGUNTA */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 15px; }
+        .modal-box { background: var(--card-bg); color: var(--text-color); width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
+        .modal-row { margin-bottom: 12px; }
+        .modal-row label { display: block; font-weight: 600; font-size: 0.9em; margin-bottom: 4px; color: var(--accent-color); }
+        .opt-edit-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .opt-edit-row input[type="radio"] { transform: scale(1.3); cursor: pointer; }
+        .opt-edit-row textarea { height: 52px; flex: 1; font-size: 0.95em; padding: 8px; }
+
+        .hide { display: none !important; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .import-log { font-size: 0.8em; color: #666; max-height: 100px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--border-color); padding: 5px; }
+        
+        .topic-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 8px 0; }
+        .topic-actions button { margin-left: 5px; background: none; border: none; cursor: pointer; font-size: 1.1em; opacity: 0.7; transition: 0.2s; }
+        .topic-actions button:hover { opacity: 1; transform: scale(1.1); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Oposicions PRO v29</h1>
+        <div class="header-controls">
+            <span id="syncStatus" class="sync-badge" onclick="pullFromCloud(true)" title="Clica per comprovar actualitzacions del núvol">☁️ Local</span>
+            <button class="mode-btn" onclick="toggleTheme()">🌗</button>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-card" onclick="startReview('unseen')" title="Fer preguntes mai contestades">📚 Total: <span id="countTotal">0</span> <small style="font-weight:normal; opacity:0.8;">(<span id="countUnseen">0</span> noves)</small></div>
+        <div class="status-card st-error" onclick="startReview('error')">🚨 Errors: <span id="countError">0</span></div>
+        <div class="status-card st-doubt" onclick="startReview('doubt')">🤔 Dubtes: <span id="countDoubt">0</span></div>
+    </div>
+
+    <br>
+
+    <div class="panel" id="configPanel">
+        <input type="text" id="globalSearch" class="search-box" placeholder="🔍 Cerca global (ex: contracte menor)..." onkeydown="if(event.key==='Enter') runSearch()">
+        
+        <h3>📊 El teu Progrés per Tema</h3>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(true)">Marcar Tots</button>
+            <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(false)">Desmarcar</button>
+        </div>
+        
+        <div class="topic-grid" id="topicGrid"></div>
+
+        <div class="action-area">
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer;" title="Selecciona preguntes prioritzant errors acumulats, dubtes i preguntes no vistes">
+                <input type="checkbox" id="smartMode" checked> <span>🧠 Prioritzar dificultat</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="checkbox" id="examMode" checked> <span>⏱️ Mode Simulacre</span>
+            </label>
+            <input type="number" id="qLimit" class="num-input" value="20" min="5">
+            <button class="main-btn" onclick="startTest()">📝 Començar Test</button>
+        </div>
+    </div>
+
+    <div class="panel" id="toolsPanel">
+        <div class="tools-title" onclick="document.getElementById('toolsBody').classList.toggle('show')">
+            🛠️ Eines (Núvol / Importar / Gestió Temes) <span>▼</span>
+        </div>
+        <div class="tools-body" id="toolsBody">
+            
+            <div class="cloud-box">
+                <h4 style="margin:0 0 8px 0;">☁️ Sincronització al Núvol (Supabase)</h4>
+                <div class="cloud-grid">
+                    <input type="text" id="sbUrl" class="input-text" placeholder="Project URL (ex: https://xyz.supabase.co)">
+                    <input type="password" id="sbKey" class="input-text" placeholder="API Key (anon public)">
+                    <input type="text" id="sbSyncId" class="input-text" placeholder="ID Secret de sincronització (ex: opos_a1_secret)">
+                </div>
+                <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+                    <button class="sec-btn" style="background:var(--accent-color);" onclick="saveCloudConfig()">💾 Desar i Sincronitzar</button>
+                    <button class="sec-btn" onclick="pushToCloud(true)">⬆️ Forçar Pujada</button>
+                    <button class="sec-btn" onclick="pullFromCloud(true)">⬇️ Forçar Baixada</button>
+                </div>
+            </div>
+
+            <p style="margin-top:20px;"><strong>Copia i enganxa el text del PDF/Web:</strong></p>
+            <textarea id="impText" placeholder="Pregunta 1..."></textarea>
+            
+            <div class="import-controls">
+                <input type="text" id="impTopic" class="input-text" placeholder="Nom del Tema (ex: B01)">
+                <button class="sec-btn" style="background:var(--accent-color);" onclick="importData()">Processar</button>
+            </div>
+            
+            <div id="impLog" class="import-log" style="display:none;"></div>
+
+            <div style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <button class="sec-btn" onclick="downloadData()">⬇️ Baixar Còpia JSON</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="sec-btn" onclick="document.getElementById('fileUp').click()">⬆️ Pujar Còpia JSON</button>
+                    <button class="sec-btn" style="background:#c0392b;" onclick="hardReset()">⚠️ Reset Local</button>
+                </div>
+                <input type="file" id="fileUp" hidden onchange="uploadData(this)">
+            </div>
+            
+            <h4 style="margin-top:20px;">Gestió de Temes</h4>
+            <div id="topicManageList" style="max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- ÀREA DE TEST I FILTRES DE RESULTATS -->
+    <div id="testArea" class="hide">
+        <div class="test-sticky-bar">
+            <div class="test-bar-top">
+                <span id="testTitleInfo" style="font-weight:bold; color:var(--accent-color);">Test en curs</span>
+                <button class="sec-btn" style="background:var(--accent-color); padding:6px 14px;" onclick="exitTest()">⬅️ Sortir i Tornar</button>
+            </div>
+            <div id="resultFilters" class="filter-group hide">
+                <button class="filter-btn active" id="fbtn-all" onclick="applyResultFilter('all')">Totes (<span id="fcount-all">0</span>)</button>
+                <button class="filter-btn" id="fbtn-err" onclick="applyResultFilter('err')">✖ Errors (<span id="fcount-err">0</span>)</button>
+                <button class="filter-btn" id="fbtn-doubt" onclick="applyResultFilter('doubt')">🤔 Dubtes (<span id="fcount-doubt">0</span>)</button>
+                <button class="filter-btn" id="fbtn-blank" onclick="applyResultFilter('blank')">⚪ En blanc (<span id="fcount-blank">0</span>)</button>
+            </div>
+        </div>
+
+        <div id="cardsContainer" style="margin-top:20px;"></div>
+        <button id="finishBtn" class="main-btn hide" style="width:100%; margin-top:20px; background:#27ae60;" onclick="finishSimulacre()">🏁 Corregir i Finalitzar</button>
+    </div>
+
+    <!-- MODAL D'EDICIÓ DE PREGUNTA -->
+    <div id="editModal" class="modal-overlay hide" onclick="if(event.target===this) closeEditModal()">
+        <div class="modal-box">
+            <h3 style="margin-top:0; color:var(--accent-color);">✏️ Editar Pregunta</h3>
+            
+            <div class="modal-row">
+                <label>Tema:</label>
+                <input type="text" id="editTema" class="input-text" style="width:100%;">
+            </div>
+
+            <div class="modal-row">
+                <label>Enunciat de la pregunta:</label>
+                <textarea id="editPregunta" style="height:80px;"></textarea>
+            </div>
+
+            <div class="modal-row">
+                <label>Opcions (marca el cercle de la resposta correcta):</label>
+                <div class="opt-edit-row">
+                    <input type="radio" name="editCorrecta" value="0" id="rad-0" title="Marcar A com a correcta">
+                    <strong>A)</strong>
+                    <textarea id="editOpt0"></textarea>
+                </div>
+                <div class="opt-edit-row">
+                    <input type="radio" name="editCorrecta" value="1" id="rad-1" title="Marcar B com a correcta">
+                    <strong>B)</strong>
+                    <textarea id="editOpt1"></textarea>
+                </div>
+                <div class="opt-edit-row">
+                    <input type="radio" name="editCorrecta" value="2" id="rad-2" title="Marcar C com a correcta">
+                    <strong>C)</strong>
+                    <textarea id="editOpt2"></textarea>
+                </div>
+                <div class="opt-edit-row">
+                    <input type="radio" name="editCorrecta" value="3" id="rad-3" title="Marcar D com a correcta">
+                    <strong>D)</strong>
+                    <textarea id="editOpt3"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <label>Justificació (apareix en corregir):</label>
+                <textarea id="editJustificacio" style="height:70px;" placeholder="Ex: Art. 159.6 LCSP..."></textarea>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; gap:10px; margin-top:15px; flex-wrap:wrap;">
+                <button class="sec-btn" style="background:#c0392b;" onclick="deleteSingleQuestion()">🗑️ Esborrar Pregunta</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="sec-btn" onclick="closeEditModal()">Cancel·lar</button>
+                    <button class="sec-btn" style="background:var(--success-bg); font-weight:bold;" onclick="saveEditedQuestion()">💾 Desar Canvis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let db = [];
+    let currentSession = [];
+    let isSimulacre = true;
+    let currentTopicsList = [];
+    let syncTimeout = null;
+    let editingSessionIdx = null;
+    let currentFilter = 'all';
+
+    window.onload = async () => {
+        const saved = localStorage.getItem('opos_v26_db') || localStorage.getItem('opos_v25_db') || localStorage.getItem('opos_v24_db');
+        if (saved) {
+            try {
+                db = JSON.parse(saved);
+                normalizeDB();
+                localStorage.setItem('opos_v26_db', JSON.stringify(db));
+            } catch (e) { console.error("Error carregant dades locals:", e); }
+        }
+
+        if (localStorage.getItem('opos_dark') === '1') document.body.classList.add('dark-mode');
+        
+        loadCloudConfigUI();
+        refreshUI();
+
+        if (hasCloudConfig()) {
+            await pullFromCloud(false);
+        }
+    };
+
+    // --- GESTIÓ DE SINCRONITZACIÓ AL NÚVOL (SUPABASE) ---
+    function loadCloudConfigUI() {
+        document.getElementById('sbUrl').value = localStorage.getItem('opos_sb_url') || '';
+        document.getElementById('sbKey').value = localStorage.getItem('opos_sb_key') || '';
+        document.getElementById('sbSyncId').value = localStorage.getItem('opos_sb_syncid') || '';
+    }
+
+    function hasCloudConfig() {
+        return Boolean(
+            localStorage.getItem('opos_sb_url') &&
+            localStorage.getItem('opos_sb_key') &&
+            localStorage.getItem('opos_sb_syncid')
+        );
+    }
+
+    function setSyncBadge(text, color) {
+        const badge = document.getElementById('syncStatus');
+        badge.innerText = text;
+        badge.style.borderColor = color || 'var(--border-color)';
+        badge.style.color = color || 'var(--text-color)';
+    }
+
+    async function saveCloudConfig() {
+        const url = document.getElementById('sbUrl').value.trim().replace(/\/$/, "");
+        const key = document.getElementById('sbKey').value.trim();
+        const syncId = document.getElementById('sbSyncId').value.trim();
+
+        if (!url || !key || !syncId) {
+            return alert("Omple els 3 camps (Project URL, API Key i ID Secret) per activar el núvol.");
+        }
+
+        localStorage.setItem('opos_sb_url', url);
+        localStorage.setItem('opos_sb_key', key);
+        localStorage.setItem('opos_sb_syncid', syncId);
+
+        await pullFromCloud(true);
+    }
+
+    async function pullFromCloud(manual = false) {
+        if (!hasCloudConfig()) {
+            if (manual) alert("Configura primer les dades de Supabase a 🛠️ Eines.");
+            return;
+        }
+
+        const url = localStorage.getItem('opos_sb_url');
+        const key = localStorage.getItem('opos_sb_key');
+        const syncId = localStorage.getItem('opos_sb_syncid');
+
+        setSyncBadge("⏳ Connectant...", "#f39c12");
+
+        try {
+            const endpoint = `${url}/rest/v1/opos_backups?sync_id=eq.${encodeURIComponent(syncId)}&select=data,updated_at`;
+            const res = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const rows = await res.json();
+
+            if (rows.length === 0) {
+                if (db.length > 0) {
+                    await pushToCloud(false);
+                    if (manual) alert(`S'ha creat la còpia inicial al núvol amb ${db.length} preguntes!`);
+                } else {
+                    setSyncBadge("☁️ Núvol buit", "#7f8c8d");
+                    if (manual) alert("Connexió correcta, però encara no hi ha preguntes per a aquest ID Secret.");
+                }
+                return;
+            }
+
+            const remoteData = rows[0].data;
+            const remoteTime = new Date(rows[0].updated_at).getTime();
+            const localTime = parseInt(localStorage.getItem('opos_last_updated') || '0');
+
+            if (manual || db.length === 0 || remoteTime > localTime) {
+                if (Array.isArray(remoteData) && remoteData.length > 0) {
+                    db = remoteData;
+                    normalizeDB();
+                    localStorage.setItem('opos_v26_db', JSON.stringify(db));
+                    localStorage.setItem('opos_last_updated', String(remoteTime));
+                    refreshUI();
+                    setSyncBadge("☁️ Sincronitzat", "var(--success-bg)");
+                    if (manual) alert(`Dades descarregades del núvol (${db.length} preguntes).`);
+                }
+            } else if (localTime > remoteTime && db.length > 0) {
+                await pushToCloud(false);
+            } else {
+                setSyncBadge("☁️ Sincronitzat", "var(--success-bg)");
+            }
+        } catch (err) {
+            console.error("Error sincronitzant amb Supabase:", err);
+            setSyncBadge("⚠️ Error núvol", "var(--error-bg)");
+            if (manual) alert("No s'ha pogut connectar amb Supabase. Revisa la URL, l'API Key i la taula opos_backups.");
+        }
+    }
+
+    async function pushToCloud(manual = false) {
+        if (!hasCloudConfig()) {
+            if (manual) alert("Configura primer les dades de Supabase a 🛠️ Eines.");
+            return;
+        }
+
+        const url = localStorage.getItem('opos_sb_url');
+        const key = localStorage.getItem('opos_sb_key');
+        const syncId = localStorage.getItem('opos_sb_syncid');
+        const nowIso = new Date().toISOString();
+        const nowMs = new Date(nowIso).getTime();
+
+        setSyncBadge("⏳ Desant...", "#f39c12");
+
+        try {
+            const endpoint = `${url}/rest/v1/opos_backups?on_conflict=sync_id`;
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify({
+                    sync_id: syncId,
+                    data: db,
+                    updated_at: nowIso
+                })
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            localStorage.setItem('opos_last_updated', String(nowMs));
+            setSyncBadge("☁️ Sincronitzat", "var(--success-bg)");
+            if (manual) alert(`S'han pujat ${db.length} preguntes al núvol correctament!`);
+        } catch (err) {
+            console.error("Error pujant a Supabase:", err);
+            setSyncBadge("⚠️ Pendent d'enviar", "var(--error-bg)");
+            if (manual) alert("Error pujant les dades al núvol. Els canvis segueixen desats al teu dispositiu.");
+        }
+    }
+
+    function scheduleCloudPush() {
+        if (!hasCloudConfig()) return;
+        setSyncBadge("⏳ Desant...", "#f39c12");
+        if (syncTimeout) clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(() => {
+            pushToCloud(false);
+        }, 600);
+    }
+
+    // --- BASE DE DADES LOCAL I COMPATIBILITAT ---
+    function normalizeDB() {
+        db.forEach(q => {
+            if (!q.id) q.id = Date.now() + Math.random();
+            
+            if (!q.stat || q.stat === 'new') {
+                if (q.status === 'correct') q.stat = 'ok';
+                else if (q.status === 'incorrect') q.stat = 'err';
+                else if (!q.stat) q.stat = 'new';
+            }
+            q.status = q.stat === 'ok' ? 'correct' : (q.stat === 'err' ? 'incorrect' : 'new');
+
+            if (typeof q.hits !== 'number') q.hits = (q.stat === 'ok') ? 1 : 0;
+            if (typeof q.misses !== 'number') q.misses = (q.stat === 'err') ? 1 : 0;
+            if (typeof q.attempts !== 'number') q.attempts = q.hits + q.misses;
+            if (q.attempts < q.hits + q.misses) q.attempts = q.hits + q.misses;
+            
+            q.doubt = Boolean(q.doubt);
+            if (!q.lastSeen) q.lastSeen = 0;
+            if (!Array.isArray(q.opcions)) q.opcions = ["", "", "", ""];
+            while (q.opcions.length < 4) q.opcions.push("");
+        });
+    }
+
+    function saveData() {
+        const now = Date.now();
+        localStorage.setItem('opos_v26_db', JSON.stringify(db));
+        localStorage.setItem('opos_last_updated', String(now));
+        updateCountersOnly();
+        scheduleCloudPush();
+    }
+
+    function updateCountersOnly() {
+        document.getElementById('countTotal').innerText = db.length;
+        document.getElementById('countUnseen').innerText = db.filter(q => (q.attempts || 0) === 0).length;
+        document.getElementById('countError').innerText = db.filter(q => q.stat === 'err').length;
+        document.getElementById('countDoubt').innerText = db.filter(q => q.doubt).length;
+    }
+
+    function formatQuestionStats(q) {
+        const att = q.attempts || 0;
+        const hits = q.hits || 0;
+        const misses = q.misses || 0;
+        if (att === 0) return `📊 Feta: 0 cops (Nova)`;
+        const ratio = Math.round((hits / att) * 100);
+        return `📊 Feta: ${att} ${att === 1 ? 'cop' : 'cops'} | ✔ ${hits} | ✖ ${misses} (${ratio}%)`;
+    }
+
+    function refreshUI() {
+        updateCountersOnly();
+
+        currentTopicsList = [...new Set(db.map(q => q.tema))].sort((a, b) => 
+            a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+        );
+
+        const grid = document.getElementById('topicGrid');
+        grid.innerHTML = currentTopicsList.length ? '' : '<div style="padding:10px; color:#777;">No hi ha preguntes. Puja una còpia JSON o sincronitza amb el núvol.</div>';
+        
+        currentTopicsList.forEach((t, index) => {
+            const qs = db.filter(q => q.tema === t);
+            const total = qs.length;
+            const ok = qs.filter(q => q.stat === 'ok').length;
+            const err = qs.filter(q => q.stat === 'err').length;
+            const okPct = total ? (ok / total) * 100 : 0;
+            const errPct = total ? (err / total) * 100 : 0;
+
+            const card = document.createElement('label');
+            card.className = 'topic-card';
+            card.innerHTML = `
+                <div class="t-header">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" data-topic-idx="${index}" checked class="t-check">
+                        <span>${escapeHTML(t)}</span>
+                    </div>
+                    <span>${total}</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill fill-ok" style="width:${okPct}%"></div>
+                    <div class="progress-fill fill-err" style="width:${errPct}%"></div>
+                </div>
+                <div class="t-stats">
+                    <span style="color:var(--success-bg)">✔ ${ok} (${Math.round(okPct)}%)</span>
+                    <span style="color:var(--error-bg)">✖ ${err} (${Math.round(errPct)}%)</span>
+                </div>`;
+            grid.appendChild(card);
+        });
+
+        const manList = document.getElementById('topicManageList');
+        manList.innerHTML = '';
+        currentTopicsList.forEach((t, index) => {
+            const qs = db.filter(q => q.tema === t).length;
+            const row = document.createElement('div');
+            row.className = 'topic-row';
+            row.innerHTML = `
+                <span>${escapeHTML(t)} (${qs})</span>
+                <div class="topic-actions">
+                    <button onclick="resetTopicStats(${index})" title="Reset Estadístiques (Posar a zero)">🔄</button>
+                    <button style="color:var(--accent-color);" onclick="renameTopic(${index})" title="Canviar nom">✏️</button>
+                    <button style="color:red;" onclick="deleteTopic(${index})" title="Esborrar Tema">🗑️</button>
+                </div>`;
+            manList.appendChild(row);
+        });
+    }
+
+    function escapeHTML(str) {
+        return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    // --- ALGORISME DE REPETICIÓ ESPAIADA I PONDERACIÓ PER DIFICULTAT ---
+    function getQuestionWeight(q) {
+        const att = q.attempts || 0;
+        const hits = q.hits || 0;
+        const misses = q.misses || 0;
+        let weight = 10;
+
+        if (att === 0) {
+            weight = 45;
+        } else {
+            const errorRate = misses / att;
+            weight += errorRate * 65;
+
+            if (q.stat === 'err') {
+                weight += 40;
+            } else if (q.stat === 'ok') {
+                const netSuccess = Math.max(0, hits - misses);
+                weight = Math.max(3, weight / (1 + netSuccess * 0.6));
+            }
+        }
+
+        if (q.doubt) weight += 35;
+
+        if (q.lastSeen > 0) {
+            const daysSince = (Date.now() - q.lastSeen) / (1000 * 60 * 60 * 24);
+            weight += Math.min(20, daysSince * 2);
+        }
+
+        return Math.max(1, weight);
+    }
+
+    function selectWeightedQuestions(pool, limit) {
+        if (pool.length <= limit) {
+            return [...pool].sort(() => Math.random() - 0.5);
+        }
+        const scored = pool.map(q => {
+            const w = getQuestionWeight(q);
+            const key = Math.pow(Math.random(), 1 / w);
+            return { q, key };
+        });
+        scored.sort((a, b) => b.key - a.key);
+        return scored.slice(0, limit).map(item => item.q);
+    }
+
+    // --- FUNCIONALITATS ---
+    function runSearch() {
+        const val = document.getElementById('globalSearch').value.toLowerCase().trim();
+        if (val.length < 3) return alert("Escriu almenys 3 lletres.");
+        
+        const results = db.filter(q => 
+            q.pregunta.toLowerCase().includes(val) || 
+            (q.justificacio && q.justificacio.toLowerCase().includes(val)) ||
+            q.opcions.some(o => o.toLowerCase().includes(val))
+        );
+        
+        if (results.length === 0) return alert("Cap coincidència.");
+        runSession(results);
+    }
+
+    function resetTopicStats(topicIdx) {
+        const topicName = currentTopicsList[topicIdx];
+        if (confirm(`Vols posar a zero totes les estadístiques i comptadors de "${topicName}"?`)) {
+            db.forEach(q => {
+                if (q.tema === topicName) {
+                    q.stat = 'new';
+                    q.status = 'new';
+                    q.hits = 0;
+                    q.misses = 0;
+                    q.attempts = 0;
+                    q.lastSeen = 0;
+                }
+            });
+            saveData();
+            refreshUI();
+            alert("Estadístiques reiniciades!");
+        }
+    }
+
+    function renameTopic(topicIdx) {
+        const oldName = currentTopicsList[topicIdx];
+        const newName = prompt("Nou nom per a '" + oldName + "':", oldName);
+        if (newName && newName.trim() !== "" && newName.trim() !== oldName) {
+            let count = 0;
+            db.forEach(q => {
+                if (q.tema === oldName) { q.tema = newName.trim(); count++; }
+            });
+            saveData();
+            refreshUI();
+            alert(`S'han mogut ${count} preguntes al tema "${newName.trim()}".`);
+        }
+    }
+
+    function deleteTopic(topicIdx) {
+        const t = currentTopicsList[topicIdx];
+        if (confirm(`Esborrar tema "${t}" i totes les seves preguntes?`)) {
+            db = db.filter(q => q.tema !== t);
+            saveData();
+            refreshUI();
+        }
+    }
+
+    function cleanHeader(text) { 
+        if (!text) return "";
+        let clean = text;
+        const patterns = [
+            /^Text de la pregunta/i, /^Marca la pregunta/i, /^Desmarca la pregunta/i, /^Desmarcada/i, /^Descartada/i,
+            /^Incorrecte/i, /^Correcte/i, /^Puntuació.*/i, /^Retroacció.*/i, /^Enunciat de la pregunta/i, /^Pregunta\s+\d+/i
+        ];
+        let changed = true;
+        while(changed) {
+            changed = false;
+            let initial = clean.trim();
+            for (let p of patterns) {
+                let match = initial.match(p);
+                if (match && match.index === 0) {
+                    clean = initial.substring(match[0].length);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        return clean.replace(/\s+/g, ' ').trim(); 
+    }
+
+    function cleanOption(text) { return text ? text.replace(/\s+/g, ' ').trim() : ""; }
+    
+    function importData() {
+        const rawBox = document.getElementById('impText');
+        let raw = rawBox.value.replace(/\u00A0/g, " "); 
+        const topic = document.getElementById('impTopic').value.trim() || "General";
+        const log = document.getElementById('impLog');
+        log.style.display = 'block'; log.innerHTML = '';
+        if (!raw.trim()) return alert("No hi ha text.");
+
+        const blocks = raw.split(/(?:^|\n)\s*Pregunta\s+\d+/i);
+        let added = 0;
+
+        blocks.forEach((block) => {
+            if (block.length < 10) return;
+            try {
+                let partsA = block.split(/\ba\.\s+/);
+                if (partsA.length < 2) return;
+                let qText = cleanHeader(partsA[0]);
+                if (qText.length < 3) return;
+
+                let rest = partsA[1];
+                let partsB = rest.split(/\bb\.\s+/); let optA = cleanOption(partsB[0]);
+                let rest2 = partsB[1];
+                let partsC = rest2.split(/\bc\.\s+/); let optB = cleanOption(partsC[0]);
+                let rest3 = partsC[1];
+                let partsD = rest3.split(/\bd\.\s+/); let optC = cleanOption(partsD[0]);
+                let rest4 = partsD[1];
+                
+                let optD = "";
+                let just = "";
+
+                let cutMatch = rest4.match(/(\[Mostrar Justificació\]|Justificació:|Retroacció|Art\.|La resposta correcta és)/i);
+
+                if (cutMatch) {
+                    optD = cleanOption(rest4.substring(0, cutMatch.index));
+                    let retroText = rest4.substring(cutMatch.index);
+
+                    let justSplit = retroText.split(/\[Mostrar Resposta\]|La resposta correcta és/i);
+                    if (justSplit.length > 0) {
+                        just = cleanOption(justSplit[0]
+                            .replace(/\[Mostrar Justificació\]/ig, "")
+                            .replace(/Justificació:/ig, "")
+                            .replace(/Retroacció/ig, "")).trim();
+                    }
+                } else {
+                    optD = cleanOption(rest4);
+                }
+
+                let solMatch = block.match(/La resposta correcta és:?(.*)/i);
+                let corrIdx = -1;
+                if (solMatch) {
+                    let solTxt = cleanOption(solMatch[1]).toLowerCase().replace(/[.,]/g,'');
+                    let opts = [optA, optB, optC, optD];
+                    let maxScore = 0;
+                    opts.forEach((o, i) => {
+                        let normOpt = cleanOption(o).toLowerCase().replace(/[.,]/g,'');
+                        let score = 0;
+                        if (normOpt === solTxt) score = 100;
+                        else if (normOpt.includes(solTxt)) score = 50;
+                        else if (solTxt.includes(normOpt)) score = 50;
+                        if (score > maxScore) { maxScore = score; corrIdx = i; }
+                    });
+                }
+
+                if (corrIdx !== -1) {
+                    const exists = db.some(x => x.pregunta === qText && x.opcions[0] === optA);
+                    if (!exists) {
+                        db.push({
+                            id: Date.now() + Math.random(),
+                            tema: topic,
+                            pregunta: qText,
+                            opcions: [optA, optB, optC, optD],
+                            correcta: corrIdx,
+                            justificacio: just,
+                            stat: 'new',
+                            status: 'new',
+                            doubt: false,
+                            attempts: 0,
+                            hits: 0,
+                            misses: 0,
+                            lastSeen: 0
+                        });
+                        added++;
+                        log.innerHTML += `<div style="color:green">✅ ${escapeHTML(qText.substring(0,40))}...</div>`;
+                    }
+                }
+            } catch (e) {}
+        });
+        rawBox.value = ""; 
+        saveData();
+        refreshUI();
+        alert(`Processament finalitzat! S'han afegit ${added} preguntes noves.`);
+    }
+
+    // --- TESTS I FILTRES DE RESULTATS ---
+    function startTest() {
+        const checks = document.querySelectorAll('.t-check:checked');
+        const topics = Array.from(checks).map(c => currentTopicsList[parseInt(c.dataset.topicIdx)]);
+        if (!topics.length) return alert("Tria almenys un tema!");
+        
+        const limit = parseInt(document.getElementById('qLimit').value) || 20;
+        const useSmart = document.getElementById('smartMode').checked;
+        const filtered = db.filter(q => topics.includes(q.tema));
+
+        if (!filtered.length) return alert("No hi ha preguntes als temes seleccionats.");
+
+        const pool = useSmart 
+            ? selectWeightedQuestions(filtered, limit)
+            : filtered.sort(() => Math.random() - 0.5).slice(0, limit);
+
+        runSession(pool);
+    }
+
+    function startReview(type) {
+        let pool = [];
+        if (type === 'error') pool = db.filter(q => q.stat === 'err');
+        if (type === 'doubt') pool = db.filter(q => q.doubt);
+        if (type === 'unseen') pool = db.filter(q => (q.attempts || 0) === 0);
+        if (!pool.length) return alert("No hi ha preguntes d'aquest tipus.");
+        
+        const limit = parseInt(document.getElementById('qLimit').value) || 20;
+        const selected = selectWeightedQuestions(pool, Math.max(limit, pool.length));
+        runSession(selected);
+    }
+
+    function exitTest() {
+        document.getElementById('testArea').classList.add('hide');
+        document.getElementById('configPanel').classList.remove('hide');
+        document.getElementById('toolsPanel').classList.remove('hide');
+        refreshUI();
+        window.scrollTo(0, 0);
+    }
+
+    function runSession(questions) {
+        currentSession = questions;
+        isSimulacre = document.getElementById('examMode').checked;
+        currentFilter = 'all';
+
+        document.getElementById('configPanel').classList.add('hide');
+        document.getElementById('toolsPanel').classList.add('hide');
+        document.getElementById('testArea').classList.remove('hide');
+        
+        document.getElementById('testTitleInfo').innerText = isSimulacre 
+            ? `⏱️ Simulacre en curs (${questions.length} preguntes)` 
+            : `📝 Test en curs (${questions.length} preguntes)`;
+
+        // En mode normal mostrem els filtres des de l'inici; en simulacre apareixen en corregir
+        const filterBar = document.getElementById('resultFilters');
+        filterBar.classList.toggle('hide', isSimulacre);
+
+        const finishBtn = document.getElementById('finishBtn');
+        finishBtn.classList.toggle('hide', !isSimulacre);
+        finishBtn.style.display = isSimulacre ? 'block' : 'none';
+
+        const container = document.getElementById('cardsContainer');
+        container.innerHTML = "";
+
+        questions.forEach((q, idx) => {
+            const dbQ = db.find(x => x.id === q.id) || q;
+            const card = document.createElement('div');
+            card.className = 'q-card';
+            card.id = 'card-' + idx;
+            card.dataset.result = 'blank';
+            renderCardContent(card, dbQ, idx);
+            container.appendChild(card);
+        });
+
+        updateFilterCounts();
+        applyResultFilter('all');
+        window.scrollTo(0, 0);
+    }
+
+    function renderCardContent(card, dbQ, idx) {
+        const btnDoubtClass = dbQ.doubt ? 'active' : '';
+        const isDone = card.classList.contains('done');
+        const userAns = card.dataset.userAns !== undefined ? parseInt(card.dataset.userAns) : NaN;
+
+        let html = `
+            <div class="q-header">
+                <span id="qtema-${idx}">${escapeHTML(dbQ.tema)}</span>
+                <div class="q-meta">
+                    <span class="q-stats-badge" id="qstats-${idx}">${formatQuestionStats(dbQ)}</span>
+                    <button class="icon-btn" onclick="openEditModal(${idx})" title="Editar pregunta, opcions o resposta correcta">✏️</button>
+                    <button class="icon-btn doubt-btn ${btnDoubtClass}" id="qdoubt-${idx}" onclick="toggleDoubt(${idx}, this)" title="Marcar/Desmarcar dubte">?</button>
+                </div>
+            </div>
+            <div class="q-text" id="qtext-${idx}">${idx + 1}. ${escapeHTML(dbQ.pregunta)}</div>
+            <div class="opts-box" id="opts-${idx}">`;
+        
+        dbQ.opcions.forEach((opt, oIdx) => {
+            let classes = ['opt'];
+            if (isDone) {
+                classes.push('disabled');
+                if (oIdx === dbQ.correcta) classes.push('correct');
+                else if (!isNaN(userAns) && oIdx === userAns) classes.push('incorrect');
+            } else if (!isNaN(userAns) && oIdx === userAns) {
+                classes.push('selected');
+            }
+            html += `<div class="${classes.join(' ')}" onclick="answer(${idx}, ${oIdx}, this)">${escapeHTML(opt)}</div>`;
+        });
+
+        const showFeed = isDone && dbQ.justificacio ? 'block' : 'none';
+        html += `</div>
+            <div class="feedback" id="feed-${idx}" style="display:${showFeed};">
+                ${dbQ.justificacio ? '<b>Info:</b> ' + escapeHTML(dbQ.justificacio) : ''}
+            </div>`;
+        card.innerHTML = html;
+    }
+
+    function updateFilterCounts() {
+        let allCount = 0;
+        let errCount = 0;
+        let doubtCount = 0;
+        let blankCount = 0;
+
+        currentSession.forEach((q, idx) => {
+            const card = document.getElementById('card-' + idx);
+            if (!card || card.dataset.deleted === "1") return;
+            allCount++;
+            const dbQ = db.find(x => x.id === q.id) || q;
+            const res = card.dataset.result || 'blank';
+            if (res === 'err') errCount++;
+            if (res === 'blank') blankCount++;
+            if (dbQ.doubt) doubtCount++;
+        });
+
+        document.getElementById('fcount-all').innerText = allCount;
+        document.getElementById('fcount-err').innerText = errCount;
+        document.getElementById('fcount-doubt').innerText = doubtCount;
+        document.getElementById('fcount-blank').innerText = blankCount;
+    }
+
+    function applyResultFilter(filterType) {
+        currentFilter = filterType;
+        ['all', 'err', 'doubt', 'blank'].forEach(t => {
+            const btn = document.getElementById('fbtn-' + t);
+            if (btn) btn.classList.toggle('active', t === filterType);
+        });
+
+        currentSession.forEach((q, idx) => {
+            const card = document.getElementById('card-' + idx);
+            if (!card || card.dataset.deleted === "1") return;
+            const dbQ = db.find(x => x.id === q.id) || q;
+            const res = card.dataset.result || 'blank';
+
+            let visible = true;
+            if (filterType === 'err') visible = (res === 'err');
+            else if (filterType === 'doubt') visible = Boolean(dbQ.doubt);
+            else if (filterType === 'blank') visible = (res === 'blank');
+
+            card.classList.toggle('hide', !visible);
+        });
+    }
+
+    function recordAnswerInDB(dbQ, isCorrect) {
+        if (!dbQ) return;
+        dbQ.attempts = (dbQ.attempts || 0) + 1;
+        if (isCorrect) {
+            dbQ.hits = (dbQ.hits || 0) + 1;
+            dbQ.stat = 'ok';
+            dbQ.status = 'correct';
+        } else {
+            dbQ.misses = (dbQ.misses || 0) + 1;
+            dbQ.stat = 'err';
+            dbQ.status = 'incorrect';
+        }
+        dbQ.lastSeen = Date.now();
+    }
+
+    function answer(qIdx, optIdx, btn) {
+        const q = currentSession[qIdx];
+        const dbQ = db.find(x => x.id === q.id) || q;
+        const card = document.getElementById('card-' + qIdx);
+        const optsDiv = document.getElementById('opts-' + qIdx);
+        const allOpts = optsDiv.querySelectorAll('.opt');
+
+        if (isSimulacre) {
+            if (card.classList.contains('done')) return;
+            if (card.dataset.userAns === String(optIdx)) {
+                btn.classList.remove('selected');
+                delete card.dataset.userAns;
+            } else {
+                allOpts.forEach(o => o.classList.remove('selected'));
+                btn.classList.add('selected');
+                card.dataset.userAns = optIdx;
+            }
+        } else {
+            if (card.classList.contains('done')) return;
+            card.classList.add('done');
+            card.dataset.userAns = optIdx;
+            card.dataset.graded = "1";
+
+            allOpts[dbQ.correcta].classList.add('correct');
+            allOpts.forEach(o => o.classList.add('disabled'));
+            
+            const isCorrect = (optIdx === dbQ.correcta);
+            card.dataset.wasCorrect = isCorrect ? "1" : "0";
+            card.dataset.result = isCorrect ? 'ok' : 'err';
+
+            if (!isCorrect) {
+                btn.classList.add('incorrect');
+            }
+            
+            recordAnswerInDB(dbQ, isCorrect);
+            
+            const badge = document.getElementById('qstats-' + qIdx);
+            if (badge) badge.innerText = formatQuestionStats(dbQ);
+
+            saveData();
+            updateFilterCounts();
+            if (dbQ.justificacio) document.getElementById('feed-' + qIdx).style.display = 'block';
+        }
+    }
+
+    function toggleDoubt(qIdx, btn) {
+        const q = currentSession[qIdx];
+        const dbQ = db.find(x => x.id === q.id);
+        if (dbQ) { 
+            dbQ.doubt = !dbQ.doubt; 
+            q.doubt = dbQ.doubt;
+            btn.classList.toggle('active'); 
+            saveData();
+            updateFilterCounts();
+            if (currentFilter === 'doubt') applyResultFilter('doubt');
+        }
+    }
+
+    function finishSimulacre() {
+        if (!confirm("Segur que vols acabar i corregir el simulacre?")) return;
+        let score = 0;
+        let answeredCount = 0;
+        let wrongCount = 0;
+
+        currentSession.forEach((q, idx) => {
+            const card = document.getElementById('card-' + idx);
+            if (!card || card.dataset.deleted === "1") return;
+            card.classList.add('done');
+            const userAns = card.dataset.userAns !== undefined ? parseInt(card.dataset.userAns) : NaN;
+            const opts = document.getElementById('opts-' + idx).querySelectorAll('.opt');
+            const dbQ = db.find(x => x.id === q.id) || q;
+            
+            opts.forEach(o => {
+                o.classList.remove('selected');
+                o.classList.add('disabled');
+            });
+
+            opts[dbQ.correcta].classList.add('correct');
+            
+            if (!isNaN(userAns)) {
+                answeredCount++;
+                const isCorrect = (userAns === dbQ.correcta);
+                card.dataset.graded = "1";
+                card.dataset.wasCorrect = isCorrect ? "1" : "0";
+                card.dataset.result = isCorrect ? 'ok' : 'err';
+
+                if (isCorrect) { 
+                    score++; 
+                } else { 
+                    wrongCount++;
+                    opts[userAns].classList.add('incorrect'); 
+                }
+                recordAnswerInDB(dbQ, isCorrect);
+
+                const badge = document.getElementById('qstats-' + idx);
+                if (badge) badge.innerText = formatQuestionStats(dbQ);
+            } else {
+                card.dataset.result = 'blank';
+            }
+
+            if (dbQ.justificacio) document.getElementById('feed-' + idx).style.display = 'block';
+        });
+
+        saveData();
+        const totalActive = currentSession.filter((_, i) => {
+            const c = document.getElementById('card-' + i);
+            return c && c.dataset.deleted !== "1";
+        }).length || 1;
+
+        const blankCount = totalActive - answeredCount;
+        const notaDirecta = ((score / totalActive) * 10).toFixed(2);
+
+        document.getElementById('testTitleInfo').innerText = `🏁 Nota: ${notaDirecta}/10 (✔ ${score} | ✖ ${wrongCount} | ⚪ ${blankCount})`;
+        document.getElementById('resultFilters').classList.remove('hide');
+        document.getElementById('finishBtn').style.display = 'none';
+
+        updateFilterCounts();
+        applyResultFilter('all');
+        window.scrollTo(0, 0);
+    }
+
+    // --- EDITOR DE PREGUNTES (MODAL) ---
+    function openEditModal(sessionIdx) {
+        editingSessionIdx = sessionIdx;
+        const q = currentSession[sessionIdx];
+        const dbQ = db.find(x => x.id === q.id) || q;
+
+        document.getElementById('editTema').value = dbQ.tema || '';
+        document.getElementById('editPregunta').value = dbQ.pregunta || '';
+        
+        for (let i = 0; i < 4; i++) {
+            document.getElementById('editOpt' + i).value = (dbQ.opcions && dbQ.opcions[i]) ? dbQ.opcions[i] : '';
+            document.getElementById('rad-' + i).checked = (dbQ.correcta === i);
+        }
+
+        document.getElementById('editJustificacio').value = dbQ.justificacio || '';
+        document.getElementById('editModal').classList.remove('hide');
+    }
+
+    function closeEditModal() {
+        editingSessionIdx = null;
+        document.getElementById('editModal').classList.add('hide');
+    }
+
+    function saveEditedQuestion() {
+        if (editingSessionIdx === null) return;
+        const idx = editingSessionIdx;
+        const q = currentSession[idx];
+        const dbQ = db.find(x => x.id === q.id) || q;
+        const card = document.getElementById('card-' + idx);
+
+        const newTema = document.getElementById('editTema').value.trim() || 'General';
+        const newPregunta = document.getElementById('editPregunta').value.trim();
+        const newOpts = [
+            document.getElementById('editOpt0').value.trim(),
+            document.getElementById('editOpt1').value.trim(),
+            document.getElementById('editOpt2').value.trim(),
+            document.getElementById('editOpt3').value.trim()
+        ];
+        const checkedRad = document.querySelector('input[name="editCorrecta"]:checked');
+        const newCorrecta = checkedRad ? parseInt(checkedRad.value) : 0;
+        const newJust = document.getElementById('editJustificacio').value.trim();
+
+        if (!newPregunta) return alert("L'enunciat de la pregunta no pot estar buit.");
+
+        // Actualitzem dades a db i a la sessió en curs
+        dbQ.tema = newTema;
+        dbQ.pregunta = newPregunta;
+        dbQ.opcions = newOpts;
+        dbQ.correcta = newCorrecta;
+        dbQ.justificacio = newJust;
+
+        Object.assign(q, dbQ);
+
+        // Si la pregunta ja havia estat corregida en aquesta sessió i hem canviat quina és la resposta correcta,
+        // recalculem l'encert/error automàticament perquè l'estadística sigui exacta
+        if (card && card.dataset.graded === "1") {
+            const userAns = parseInt(card.dataset.userAns);
+            const oldWasCorrect = card.dataset.wasCorrect === "1";
+            const newIsCorrect = (userAns === newCorrecta);
+
+            if (oldWasCorrect !== newIsCorrect) {
+                if (newIsCorrect) {
+                    dbQ.misses = Math.max(0, (dbQ.misses || 1) - 1);
+                    dbQ.hits = (dbQ.hits || 0) + 1;
+                    dbQ.stat = 'ok';
+                    dbQ.status = 'correct';
+                } else {
+                    dbQ.hits = Math.max(0, (dbQ.hits || 1) - 1);
+                    dbQ.misses = (dbQ.misses || 0) + 1;
+                    dbQ.stat = 'err';
+                    dbQ.status = 'incorrect';
+                }
+                card.dataset.wasCorrect = newIsCorrect ? "1" : "0";
+            }
+            card.dataset.result = newIsCorrect ? 'ok' : 'err';
+        }
+
+        if (card) {
+            renderCardContent(card, dbQ, idx);
+        }
+
+        saveData();
+        updateFilterCounts();
+        applyResultFilter(currentFilter);
+        closeEditModal();
+    }
+
+    function deleteSingleQuestion() {
+        if (editingSessionIdx === null) return;
+        if (!confirm("Segur que vols esborrar definitivament aquesta pregunta de la base de dades?")) return;
+
+        const idx = editingSessionIdx;
+        const q = currentSession[idx];
+        db = db.filter(x => x.id !== q.id);
+
+        const card = document.getElementById('card-' + idx);
+        if (card) {
+            card.dataset.deleted = "1";
+            card.classList.add('hide');
+        }
+
+        saveData();
+        updateFilterCounts();
+        closeEditModal();
+    }
+
+    function hardReset() {
+        if (confirm("AIXÒ ESBORRARÀ LES PREGUNTES DEL NAVEGADOR LOCAL.")) {
+            localStorage.removeItem('opos_v26_db');
+            localStorage.removeItem('opos_last_updated');
+            location.reload();
+        }
+    }
+    
+    function toggleTopics(val) { document.querySelectorAll('.t-check').forEach(c => c.checked = val); }
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); localStorage.setItem('opos_dark', document.body.classList.contains('dark-mode') ? '1' : '0'); }
+    
+    function downloadData() {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: 'application/json'}));
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        a.download = `oposicions_backup_${dateStr}.json`;
+        a.click();
+    }
+    
+    function uploadData(inp) {
+        const f = inp.files[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = e => {
+            if (confirm("Vols carregar aquesta còpia? (Es reemplaçaran les dades actuals i es pujaran al núvol si està actiu)")) {
+                try {
+                    db = JSON.parse(e.target.result);
+                    normalizeDB();
+                    saveData();
+                    refreshUI();
+                    alert(`Còpia carregada correctament! (${db.length} preguntes)`);
+                } catch (err) {
+                    alert("Error en llegir el fitxer JSON.");
+                }
+            }
+            inp.value = "";
+        };
+        r.readAsText(f);
+    }
+</script>
+</body>
+</html>
