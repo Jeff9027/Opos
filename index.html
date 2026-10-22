@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oposicions PRO v29 - Editor i Filtres</title>
+    <title>Oposicions PRO v30 - JSON & Creació Manual</title>
     <style>
         :root {
             --bg-color: #f4f6f8;
@@ -112,7 +112,7 @@
         .doubt-btn { color: #aaa; }
         .doubt-btn.active { background: #f1c40f; color: white; border-color: #f1c40f; }
 
-        /* MODAL D'EDICIÓ DE PREGUNTA */
+        /* MODAL D'EDICIÓ / CREACIÓ DE PREGUNTA */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 15px; }
         .modal-box { background: var(--card-bg); color: var(--text-color); width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
         .modal-row { margin-bottom: 12px; }
@@ -123,7 +123,7 @@
 
         .hide { display: none !important; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .import-log { font-size: 0.8em; color: #666; max-height: 100px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--border-color); padding: 5px; }
+        .import-log { font-size: 0.8em; color: #666; max-height: 120px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; }
         
         .topic-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 8px 0; }
         .topic-actions button { margin-left: 5px; background: none; border: none; cursor: pointer; font-size: 1.1em; opacity: 0.7; transition: 0.2s; }
@@ -133,7 +133,7 @@
 <body>
 
     <div class="header">
-        <h1>Oposicions PRO v29</h1>
+        <h1>Oposicions PRO v30</h1>
         <div class="header-controls">
             <span id="syncStatus" class="sync-badge" onclick="pullFromCloud(true)" title="Clica per comprovar actualitzacions del núvol">☁️ Local</span>
             <button class="mode-btn" onclick="toggleTheme()">🌗</button>
@@ -151,10 +151,13 @@
     <div class="panel" id="configPanel">
         <input type="text" id="globalSearch" class="search-box" placeholder="🔍 Cerca global (ex: contracte menor)..." onkeydown="if(event.key==='Enter') runSearch()">
         
-        <h3>📊 El teu Progrés per Tema</h3>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(true)">Marcar Tots</button>
-            <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(false)">Desmarcar</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+            <h3 style="margin:0;">📊 El teu Progrés per Tema</h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="sec-btn" style="background:var(--success-bg); font-weight:bold;" onclick="openNewQuestionModal()">➕ Nova Pregunta</button>
+                <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(true)">Marcar Tots</button>
+                <button class="sec-btn" style="font-size:0.8em;" onclick="toggleTopics(false)">Desmarcar</button>
+            </div>
         </div>
         
         <div class="topic-grid" id="topicGrid"></div>
@@ -173,15 +176,15 @@
 
     <div class="panel" id="toolsPanel">
         <div class="tools-title" onclick="document.getElementById('toolsBody').classList.toggle('show')">
-            🛠️ Eines (Núvol / Importar / Gestió Temes) <span>▼</span>
+            🛠️ Eines (Núvol / Importar Text o JSON / Gestió Temes) <span>▼</span>
         </div>
         <div class="tools-body" id="toolsBody">
             
             <div class="cloud-box">
                 <h4 style="margin:0 0 8px 0;">☁️ Sincronització al Núvol (Supabase)</h4>
                 <div class="cloud-grid">
-                    <input type="text" id="sbUrl" class="input-text" placeholder="Project URL (ex: https://xyz.supabase.co)">
-                    <input type="password" id="sbKey" class="input-text" placeholder="API Key (anon public)">
+                    <input type="text" id="sbUrl" class="input-text" placeholder="Project URL (ex: [https://xyz.supabase.co](https://xyz.supabase.co))">
+                    <input type="password" id="sbKey" class="input-text" placeholder="API Key (Publishable / anon public)">
                     <input type="text" id="sbSyncId" class="input-text" placeholder="ID Secret de sincronització (ex: opos_a1_secret)">
                 </div>
                 <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
@@ -191,12 +194,18 @@
                 </div>
             </div>
 
-            <p style="margin-top:20px;"><strong>Copia i enganxa el text del PDF/Web:</strong></p>
-            <textarea id="impText" placeholder="Pregunta 1..."></textarea>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:20px; margin-bottom:8px;">
+                <strong>📥 Importar Preguntes (Text Acadèmia o JSON de Gemini/NotebookLM):</strong>
+                <div style="display:flex; gap:8px;">
+                    <button class="sec-btn" style="background:var(--success-bg);" onclick="openNewQuestionModal()">➕ Crear Manualment</button>
+                    <button class="sec-btn" style="background:#8e44ad;" onclick="copyAIPrompt()" title="Copia les instruccions per demanar preguntes en JSON a Gemini o NotebookLM">📋 Copiar Prompt IA</button>
+                </div>
+            </div>
+            <textarea id="impText" placeholder="Enganxa aquí el text de l'acadèmia (Pregunta 1...) O el bloc JSON generat amb IA ([ { &quot;pregunta&quot;: ... } ])"></textarea>
             
             <div class="import-controls">
-                <input type="text" id="impTopic" class="input-text" placeholder="Nom del Tema (ex: B01)">
-                <button class="sec-btn" style="background:var(--accent-color);" onclick="importData()">Processar</button>
+                <input type="text" id="impTopic" list="existingTopicsList" class="input-text" placeholder="Nom del Tema (si el deixes buit en JSON, usarà el del JSON)">
+                <button class="sec-btn" style="background:var(--accent-color); font-weight:bold;" onclick="importData()">⚙️ Processar i Importar</button>
             </div>
             
             <div id="impLog" class="import-log" style="display:none;"></div>
@@ -234,19 +243,22 @@
         <button id="finishBtn" class="main-btn hide" style="width:100%; margin-top:20px; background:#27ae60;" onclick="finishSimulacre()">🏁 Corregir i Finalitzar</button>
     </div>
 
-    <!-- MODAL D'EDICIÓ DE PREGUNTA -->
+    <!-- DATALIST PER AUTOCOMPLETAR TEMES -->
+    <datalist id="existingTopicsList"></datalist>
+
+    <!-- MODAL D'EDICIÓ / CREACIÓ DE PREGUNTA -->
     <div id="editModal" class="modal-overlay hide" onclick="if(event.target===this) closeEditModal()">
         <div class="modal-box">
-            <h3 style="margin-top:0; color:var(--accent-color);">✏️ Editar Pregunta</h3>
+            <h3 id="modalTitle" style="margin-top:0; color:var(--accent-color);">✏️ Editar Pregunta</h3>
             
             <div class="modal-row">
-                <label>Tema:</label>
-                <input type="text" id="editTema" class="input-text" style="width:100%;">
+                <label>Tema (pots triar-ne un d'existent o escriure'n un de nou):</label>
+                <input type="text" id="editTema" list="existingTopicsList" class="input-text" style="width:100%;" placeholder="Ex: B04 Contractació Pública (T17-25)">
             </div>
 
             <div class="modal-row">
                 <label>Enunciat de la pregunta:</label>
-                <textarea id="editPregunta" style="height:80px;"></textarea>
+                <textarea id="editPregunta" style="height:80px;" placeholder="Escriu l'enunciat de la pregunta..."></textarea>
             </div>
 
             <div class="modal-row">
@@ -254,22 +266,22 @@
                 <div class="opt-edit-row">
                     <input type="radio" name="editCorrecta" value="0" id="rad-0" title="Marcar A com a correcta">
                     <strong>A)</strong>
-                    <textarea id="editOpt0"></textarea>
+                    <textarea id="editOpt0" placeholder="Opció A"></textarea>
                 </div>
                 <div class="opt-edit-row">
                     <input type="radio" name="editCorrecta" value="1" id="rad-1" title="Marcar B com a correcta">
                     <strong>B)</strong>
-                    <textarea id="editOpt1"></textarea>
+                    <textarea id="editOpt1" placeholder="Opció B"></textarea>
                 </div>
                 <div class="opt-edit-row">
                     <input type="radio" name="editCorrecta" value="2" id="rad-2" title="Marcar C com a correcta">
                     <strong>C)</strong>
-                    <textarea id="editOpt2"></textarea>
+                    <textarea id="editOpt2" placeholder="Opció C"></textarea>
                 </div>
                 <div class="opt-edit-row">
                     <input type="radio" name="editCorrecta" value="3" id="rad-3" title="Marcar D com a correcta">
                     <strong>D)</strong>
-                    <textarea id="editOpt3"></textarea>
+                    <textarea id="editOpt3" placeholder="Opció D"></textarea>
                 </div>
             </div>
 
@@ -279,8 +291,8 @@
             </div>
 
             <div style="display:flex; justify-content:space-between; gap:10px; margin-top:15px; flex-wrap:wrap;">
-                <button class="sec-btn" style="background:#c0392b;" onclick="deleteSingleQuestion()">🗑️ Esborrar Pregunta</button>
-                <div style="display:flex; gap:10px;">
+                <button id="deleteSingleBtn" class="sec-btn" style="background:#c0392b;" onclick="deleteSingleQuestion()">🗑️ Esborrar Pregunta</button>
+                <div style="display:flex; gap:10px; margin-left:auto;">
                     <button class="sec-btn" onclick="closeEditModal()">Cancel·lar</button>
                     <button class="sec-btn" style="background:var(--success-bg); font-weight:bold;" onclick="saveEditedQuestion()">💾 Desar Canvis</button>
                 </div>
@@ -295,6 +307,7 @@
     let currentTopicsList = [];
     let syncTimeout = null;
     let editingSessionIdx = null;
+    let isCreatingNew = false;
     let currentFilter = 'all';
 
     window.onload = async () => {
@@ -474,6 +487,11 @@
         db.forEach(q => {
             if (!q.id) q.id = Date.now() + Math.random();
             
+            // Neteja automàtica de residus de capçaleres d'acadèmia en preguntes antigues
+            if (q.pregunta) {
+                q.pregunta = cleanHeader(q.pregunta);
+            }
+
             if (!q.stat || q.stat === 'new') {
                 if (q.status === 'correct') q.stat = 'ok';
                 else if (q.status === 'incorrect') q.stat = 'err';
@@ -524,8 +542,14 @@
             a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
         );
 
+        // Actualitzem el datalist per autocompletar temes
+        const dataList = document.getElementById('existingTopicsList');
+        if (dataList) {
+            dataList.innerHTML = currentTopicsList.map(t => `<option value="${escapeHTML(t)}">`).join('');
+        }
+
         const grid = document.getElementById('topicGrid');
-        grid.innerHTML = currentTopicsList.length ? '' : '<div style="padding:10px; color:#777;">No hi ha preguntes. Puja una còpia JSON o sincronitza amb el núvol.</div>';
+        grid.innerHTML = currentTopicsList.length ? '' : '<div style="padding:10px; color:#777;">No hi ha preguntes. Puja una còpia JSON, crea\'n una o sincronitza amb el núvol.</div>';
         
         currentTopicsList.forEach((t, index) => {
             const qs = db.filter(q => q.tema === t);
@@ -621,7 +645,35 @@
         return scored.slice(0, limit).map(item => item.q);
     }
 
-    // --- FUNCIONALITATS ---
+    // --- FUNCIONALITATS I DOBLE SISTEMA D'IMPORTACIÓ ---
+    function copyAIPrompt() {
+        const promptText = `Genera 10 preguntes tipus test d'oposicions basades en aquesta informació.
+Respon ÚNICAMENT amb un bloc de codi JSON vàlid amb aquesta estructura exacta, sense text addicional:
+
+[
+  {
+    "tema": "Nom del Tema",
+    "pregunta": "Enunciat de la pregunta...",
+    "opcions": [
+      "Text de l'opció A (sense lletra a. al davant)",
+      "Text de l'opció B",
+      "Text de l'opció C",
+      "Text de l'opció D"
+    ],
+    "correcta": 0,
+    "justificacio": "Article normatiu o explicació breu."
+  }
+]
+
+Nota: El camp "correcta" ha de ser un número enter del 0 al 3 (0=A, 1=B, 2=C, 3=D).`;
+
+        navigator.clipboard.writeText(promptText).then(() => {
+            alert("📋 Prompt copiat al porta-retalls!\n\nEnganxa'l a Gemini o NotebookLM juntament amb els teus apunts.");
+        }).catch(() => {
+            prompt("Copia aquest prompt manualment:", promptText);
+        });
+    }
+
     function runSearch() {
         const val = document.getElementById('globalSearch').value.toLowerCase().trim();
         if (val.length < 3) return alert("Escriu almenys 3 lletres.");
@@ -701,16 +753,94 @@
         return clean.replace(/\s+/g, ' ').trim(); 
     }
 
-    function cleanOption(text) { return text ? text.replace(/\s+/g, ' ').trim() : ""; }
+    function cleanOption(text) { return text ? String(text).replace(/\s+/g, ' ').trim() : ""; }
     
     function importData() {
         const rawBox = document.getElementById('impText');
-        let raw = rawBox.value.replace(/\u00A0/g, " "); 
-        const topic = document.getElementById('impTopic').value.trim() || "General";
+        let raw = rawBox.value.replace(/\u00A0/g, " ").trim(); 
+        const manualTopic = document.getElementById('impTopic').value.trim();
         const log = document.getElementById('impLog');
-        log.style.display = 'block'; log.innerHTML = '';
-        if (!raw.trim()) return alert("No hi ha text.");
+        log.style.display = 'block'; 
+        log.innerHTML = '';
 
+        if (!raw) return alert("No hi ha text per processar.");
+
+        // Netegem possibles blocs markdown ```json ... ``` copiats de Gemini
+        let cleanJsonCandidate = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+        // 1. AUTO-DETECCIÓ DE FORMAT JSON
+        if (cleanJsonCandidate.startsWith('[') || cleanJsonCandidate.startsWith('{')) {
+            try {
+                let parsed = JSON.parse(cleanJsonCandidate);
+                if (!Array.isArray(parsed)) parsed = [parsed];
+                let added = 0;
+                let skipped = 0;
+
+                parsed.forEach((item, idx) => {
+                    if (!item || !item.pregunta || !Array.isArray(item.opcions) || item.opcions.length < 2) {
+                        log.innerHTML += `<div style="color:#e67e22">⚠️ Element ${idx + 1} ignorat: format incomplet.</div>`;
+                        return;
+                    }
+
+                    const qText = cleanHeader(String(item.pregunta));
+                    const opts = [
+                        cleanOption(item.opcions[0] || ""),
+                        cleanOption(item.opcions[1] || ""),
+                        cleanOption(item.opcions[2] || ""),
+                        cleanOption(item.opcions[3] || "")
+                    ];
+
+                    // Suport per a 'correcta' numèrica (0-3) o lletra ("A"-"D")
+                    let corrIdx = 0;
+                    if (typeof item.correcta === 'number') {
+                        corrIdx = item.correcta;
+                    } else if (typeof item.correcta === 'string') {
+                        const mapLet = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '0': 0, '1': 1, '2': 2, '3': 3 };
+                        const key = item.correcta.trim().toLowerCase();
+                        if (mapLet[key] !== undefined) corrIdx = mapLet[key];
+                    }
+                    if (corrIdx < 0 || corrIdx > 3) corrIdx = 0;
+
+                    const finalTopic = manualTopic || (item.tema ? String(item.tema).trim() : "General");
+                    const just = cleanOption(item.justificacio || item.info || "");
+
+                    const exists = db.some(x => x.pregunta === qText && x.opcions[0] === opts[0]);
+                    if (!exists) {
+                        db.push({
+                            id: Date.now() + Math.random(),
+                            tema: finalTopic,
+                            pregunta: qText,
+                            opcions: opts,
+                            correcta: corrIdx,
+                            justificacio: just,
+                            stat: 'new',
+                            status: 'new',
+                            doubt: false,
+                            attempts: 0,
+                            hits: 0,
+                            misses: 0,
+                            lastSeen: 0
+                        });
+                        added++;
+                        log.innerHTML += `<div style="color:green">✅ [JSON] ${escapeHTML(qText.substring(0, 45))}...</div>`;
+                    } else {
+                        skipped++;
+                        log.innerHTML += `<div style="color:#7f8c8d">⏭️ Duplicada: ${escapeHTML(qText.substring(0, 40))}...</div>`;
+                    }
+                });
+
+                rawBox.value = "";
+                saveData();
+                refreshUI();
+                alert(`Importació JSON completada!\n\n✅ Afegides: ${added}\n⏭️ Duplicades omeses: ${skipped}`);
+                return;
+            } catch (err) {
+                return alert("S'ha detectat un intent d'importació JSON però hi ha un error de sintaxi al text:\n\n" + err.message);
+            }
+        }
+
+        // 2. SISTEMA CLÀSSIC (COPIAR I ENGANXAR TESTS D'ACADÈMIA)
+        const topic = manualTopic || "General";
         const blocks = raw.split(/(?:^|\n)\s*Pregunta\s+\d+/i);
         let added = 0;
 
@@ -793,7 +923,7 @@
         rawBox.value = ""; 
         saveData();
         refreshUI();
-        alert(`Processament finalitzat! S'han afegit ${added} preguntes noves.`);
+        alert(`Processament de text finalitzat! S'han afegit ${added} preguntes noves.`);
     }
 
     // --- TESTS I FILTRES DE RESULTATS ---
@@ -848,7 +978,6 @@
             ? `⏱️ Simulacre en curs (${questions.length} preguntes)` 
             : `📝 Test en curs (${questions.length} preguntes)`;
 
-        // En mode normal mostrem els filtres des de l'inici; en simulacre apareixen en corregir
         const filterBar = document.getElementById('resultFilters');
         filterBar.classList.toggle('hide', isSimulacre);
 
@@ -1092,11 +1221,35 @@
         window.scrollTo(0, 0);
     }
 
-    // --- EDITOR DE PREGUNTES (MODAL) ---
+    // --- EDITOR I CREADOR DE PREGUNTES (MODAL) ---
+    function openNewQuestionModal() {
+        isCreatingNew = true;
+        editingSessionIdx = null;
+
+        document.getElementById('modalTitle').innerText = '➕ Crear Nova Pregunta';
+        document.getElementById('deleteSingleBtn').classList.add('hide');
+
+        const defaultTopic = document.getElementById('impTopic').value.trim() || (currentTopicsList[0] || '');
+        document.getElementById('editTema').value = defaultTopic;
+        document.getElementById('editPregunta').value = '';
+        
+        for (let i = 0; i < 4; i++) {
+            document.getElementById('editOpt' + i).value = '';
+            document.getElementById('rad-' + i).checked = (i === 0);
+        }
+
+        document.getElementById('editJustificacio').value = '';
+        document.getElementById('editModal').classList.remove('hide');
+    }
+
     function openEditModal(sessionIdx) {
+        isCreatingNew = false;
         editingSessionIdx = sessionIdx;
         const q = currentSession[sessionIdx];
         const dbQ = db.find(x => x.id === q.id) || q;
+
+        document.getElementById('modalTitle').innerText = '✏️ Editar Pregunta';
+        document.getElementById('deleteSingleBtn').classList.remove('hide');
 
         document.getElementById('editTema').value = dbQ.tema || '';
         document.getElementById('editPregunta').value = dbQ.pregunta || '';
@@ -1112,16 +1265,11 @@
 
     function closeEditModal() {
         editingSessionIdx = null;
+        isCreatingNew = false;
         document.getElementById('editModal').classList.add('hide');
     }
 
     function saveEditedQuestion() {
-        if (editingSessionIdx === null) return;
-        const idx = editingSessionIdx;
-        const q = currentSession[idx];
-        const dbQ = db.find(x => x.id === q.id) || q;
-        const card = document.getElementById('card-' + idx);
-
         const newTema = document.getElementById('editTema').value.trim() || 'General';
         const newPregunta = document.getElementById('editPregunta').value.trim();
         const newOpts = [
@@ -1135,8 +1283,40 @@
         const newJust = document.getElementById('editJustificacio').value.trim();
 
         if (!newPregunta) return alert("L'enunciat de la pregunta no pot estar buit.");
+        if (newOpts.some(o => !o)) return alert("Omple el text de totes 4 opcions (A, B, C i D).");
 
-        // Actualitzem dades a db i a la sessió en curs
+        // CAS 1: CREACIÓ D'UNA NOVA PREGUNTA MANUAL
+        if (isCreatingNew) {
+            const newQ = {
+                id: Date.now() + Math.random(),
+                tema: newTema,
+                pregunta: newPregunta,
+                opcions: newOpts,
+                correcta: newCorrecta,
+                justificacio: newJust,
+                stat: 'new',
+                status: 'new',
+                doubt: false,
+                attempts: 0,
+                hits: 0,
+                misses: 0,
+                lastSeen: 0
+            };
+            db.push(newQ);
+            saveData();
+            refreshUI();
+            closeEditModal();
+            alert("✅ Nova pregunta desada correctament!");
+            return;
+        }
+
+        // CAS 2: EDICIÓ D'UNA PREGUNTA EXISTENT DURANT EL TEST
+        if (editingSessionIdx === null) return;
+        const idx = editingSessionIdx;
+        const q = currentSession[idx];
+        const dbQ = db.find(x => x.id === q.id) || q;
+        const card = document.getElementById('card-' + idx);
+
         dbQ.tema = newTema;
         dbQ.pregunta = newPregunta;
         dbQ.opcions = newOpts;
@@ -1145,8 +1325,6 @@
 
         Object.assign(q, dbQ);
 
-        // Si la pregunta ja havia estat corregida en aquesta sessió i hem canviat quina és la resposta correcta,
-        // recalculem l'encert/error automàticament perquè l'estadística sigui exacta
         if (card && card.dataset.graded === "1") {
             const userAns = parseInt(card.dataset.userAns);
             const oldWasCorrect = card.dataset.wasCorrect === "1";
